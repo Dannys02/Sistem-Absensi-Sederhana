@@ -2,8 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,6 +18,7 @@
     "express": "^5.2.1",
     "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.6.0",
     "mongoose": "^9.10.0"
   },
   "devDependencies": {

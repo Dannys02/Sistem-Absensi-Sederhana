@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
   { timestamp: true },
 );
 
+// hash kolom password
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);

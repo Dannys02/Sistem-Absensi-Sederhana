@@ -17,20 +17,22 @@ const updateClass = Joi.object({
   }),
 });
 
-const validateCreateClass = (req, res) => {
+const validateCreateClass = (req, res, next) => {
   const { error, value } = createClass.validate(req.body);
   if (error) {
     return res.status(400).json({ error: error.details[0].message });
   }
   req.body = value;
+  next();
 };
 
-const validateUpdateClass = (req, res) => {
+const validateUpdateClass = (req, res, next) => {
   const { error, value } = updateClass.validate(req.body);
   if (error) {
     return res.status(400).json({ error: error.details[0].message });
   }
   req.body = value;
+  next();
 };
 
 module.exports = { validateCreateClass, validateUpdateClass };

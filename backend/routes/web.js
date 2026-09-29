@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { login, createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/authController");
 const { validateCreateClass, validateUpdateClass } = require("../request/validateClass");
+const { validateCreateStudent, validateUpdateStudent } = require("../request/validateUserStudent");
 const { createClass, getAllClass, updateClass, deleteClass, classById } = require("../controllers/classController");
 
 // Auth
@@ -10,8 +11,8 @@ router.post("/login", login);
 
 // CRUD Student
 router.get("/all-student", getAllStudentAccount);
-router.post("/create-student", createStudentAccount);
-router.put("/update-student/:id", updateStudentAccount);
+router.post("/create-student", validateCreateStudent, createStudentAccount);
+router.put("/update-student/:id", validateUpdateStudent, updateStudentAccount);
 router.delete("/delete-student/:id", deleteStudentAccount);
 
 // CRUD Class

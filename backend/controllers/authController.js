@@ -1,6 +1,8 @@
 // const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Student = require("../models/Student");
+const { success, error } = require("../utils/responseHelper");
+const mongoose = require("mongoose");
 
 // Login bisa diakses admin dan siswa
 const login = async (req, res) => {
@@ -34,35 +36,31 @@ const login = async (req, res) => {
 // CRUD Akun Siswa/i hanya admin
 const getAllStudentAccount = async (req, res) => {
   try {
-    const user = await User.find();
-    console.log(user);
-    const student = await Student.find({});
+    const [users, students] = await Promise.all([User.find(), Student.find()]);
+    // Gabungkan dalam objek
+    const data = { users, students };
 
-    res.json({
-      success: true,
-      message: "Berhasil mengambil data akun siswa",
-      data: { user, student },
-    });
+    success(res, 200, "Berhasil mengambil semua siswa dan user", data);
   } catch (error) {
-    console.log(error);
+    return error(res, 500, error.message);
   }
 };
 
 const createStudentAccount = async (req, res) => {
   try {
     const { name, email, password, classId, nis } = req.body;
-
     const user = await User.create({ name, email, password, role: "siswa" });
     const student = await Student.create({ userId: user._id, classId, nis });
 
-    res.status(201).json({
-      success: true,
-      message: "Akun siswa berhasil dibuat",
-      data: { user, student },
-    });
+    const cntClass = await Class.findById(id);
+
+    if (!cntClass) {
+      return error(res, 404, "Kelas tidak ditemukan");
+    }
+
+    success(res, 201, "Berhasil menambahkan user atau siswa/i");
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-    console.log(error);
+    return error(res, 500, error.message);
   }
 };
 
@@ -71,13 +69,34 @@ const updateStudentAccount = async (req, res) => {
     const { id } = req.params;
     const { name, email, password, classId, nis } = req.body;
 
-    await User.findByIdAndUpdate(id, { name, email, password });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 400, "Format ID kelas tidak valid");
+    }
 
-    await Student.findOneAndUpdate({ userId: id }, { $set: { classId, nis } });
+    const userUpdate = await User.findByIdAndUpdate(id, {
+      name,
+      email,
+      password,
+    });
+    const updatedStudent = await Student.findOneAndUpdate(
+      { userId: id },
+      { $set: { classId, nis } },
+    );
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Akun berhasil diperbarui" });
+    if (!updatedStudent) {
+      return error(res, 404, "User atau siswa tidak ditemukan");
+    }
+
+    const updatedClass = await Class.findByIdAndUpdate(
+      id,
+      { name },
+      { new: true, runValidators: true },
+    );
+    if (!updatedClass) {
+      return error(res, 404, "User atau siswa tidak ditemukan");
+    }
+
+    success(res, 204, "Berhasil memperbarui user atau siswa/i");
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

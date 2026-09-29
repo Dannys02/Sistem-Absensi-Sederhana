@@ -1,5 +1,5 @@
 const Class = require("../models/Class");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { success, error } = require("../utils/responseHelper");
 
 const getAllClass = async (req, res) => {
@@ -15,11 +15,9 @@ const createClass = async (req, res) => {
   try {
     const { name } = req.body;
 
-    const isNameExist = await Class.findOne({ name });
-    if (isNameExist) {
-      return res
-        .status(400)
-        .json({ success: false, message: `Nama ${name} sudah digunakan` });
+    const adaNama = await Class.findOne({ name });
+    if (adaNama) {
+      return error(res, 400, `Nama ${name} sudah digunakan jir`);
     }
 
     const classData = await Class.create({ name });
@@ -32,8 +30,14 @@ const createClass = async (req, res) => {
 const classById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 400, "Format ID kelas tidak valid");
+    }
+
     const classData = await Class.findById(id);
     if (!classData) return error(res, 404, "Kelas tidak ditemukan", classData);
+
     success(res, 200, "Berhasil mengambil kelas berdasarkan id", classData);
   } catch (error) {
     return error(res, 500, error.message);
@@ -49,8 +53,8 @@ const updateClass = async (req, res) => {
       return error(res, 400, "Format ID kelas tidak valid");
     }
 
-    const isNameExist = await Class.findOne({ name, _id: { $ne: id } });
-    if (isNameExist) {
+    const adaNama = await Class.findOne({ name, _id: { $ne: id } });
+    if (adaNama) {
       return error(res, 400, `Nama ${name} sudah digunakan`);
     }
 
@@ -64,7 +68,7 @@ const updateClass = async (req, res) => {
       return error(res, 404, "Kelas tidak ditemukan");
     }
 
-    return success(res, 200, "Berhasil mengubah kelas", updatedClass);
+    success(res, 204, "Berhasil memperbarui kelas", updatedClass);
   } catch (err) {
     return error(res, 500, err.message);
   }

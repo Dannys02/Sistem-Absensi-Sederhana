@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "siswa"], default: "siswa" },
   },
-  { timestamp: true },
+  { timestamps: true },
 );
 
 // hash kolom password

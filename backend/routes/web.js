@@ -6,21 +6,23 @@ const { validateCreateClass, validateUpdateClass } = require("../request/validat
 const { validateCreateStudent, validateUpdateStudent } = require("../request/validateUserStudent");
 const { createClass, getAllClass, updateClass, deleteClass, classById } = require("../controllers/classController");
 
+const authenticate = require('../middleware/authenticate');
+
 // Auth
 router.post("/login", login);
 
 // CRUD Student
-router.get("/all-student", getAllStudentAccount);
-router.post("/create-student", validateCreateStudent, createStudentAccount);
-router.put("/update-student/:id", validateUpdateStudent, updateStudentAccount);
-router.delete("/delete-student/:id", deleteStudentAccount);
+router.get("/all-student", authenticate, getAllStudentAccount);
+router.post("/create-student", authenticate, validateCreateStudent, createStudentAccount);
+router.put("/update-student/:id", authenticate, validateUpdateStudent, updateStudentAccount);
+router.delete("/delete-student/:id", authenticate, deleteStudentAccount);
 
 // CRUD Class
-router.get("/all-class", getAllClass);
-router.get("/show-class/:id", classById);
-router.post("/create-class", validateCreateClass, createClass );
-router.put("/update-class/:id", validateUpdateClass, updateClass );
-router.delete("/delete-class/:id", deleteClass);
+router.get("/all-class", authenticate, getAllClass);
+router.get("/show-class/:id", authenticate, classById);
+router.post("/create-class", authenticate, validateCreateClass, createClass );
+router.put("/update-class/:id", authenticate, validateUpdateClass, updateClass );
+router.delete("/delete-class/:id", authenticate, deleteClass);
 
 // Error handler async
 router.use((err, req, res, next) => {

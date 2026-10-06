@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { register, login, createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/authController");
+const { register, login } = require("../controllers/authController");
+const { createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/studentController");
 const { validateCreateClass, validateUpdateClass } = require("../request/validateClass");
 const { validateCreateStudent, validateUpdateStudent } = require("../request/validateUserStudent");
 const { createClass, getAllClass, updateClass, deleteClass, classById } = require("../controllers/classController");

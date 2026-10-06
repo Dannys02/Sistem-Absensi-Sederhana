@@ -1,29 +1,104 @@
 const express = require("express");
 const router = express.Router();
 
+// import fungsi controller
 const { register, login } = require("../controllers/authController");
-const { createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/studentController");
-const { validateCreateClass, validateUpdateClass } = require("../request/validateClass");
-const { validateCreateStudent, validateUpdateStudent } = require("../request/validateUserStudent");
-const { createClass, getAllClass, updateClass, deleteClass, classById } = require("../controllers/classController");
+const {
+  createClass,
+  getAllClass,
+  updateClass,
+  deleteClass,
+  classById,
+} = require("../controllers/classController");
+const {
+  createStudentAccount,
+  getAllStudentAccount,
+  updateStudentAccount,
+  deleteStudentAccount,
+} = require("../controllers/studentController");
+const {
+  createAttendanceSession,
+} = require("../controllers/attendanceSessionController");
 
-const { authenticate, authorize, validateBody} = require('../middleware/authenticate');
+// validasi request body
+const {
+  validateCreateClass,
+  validateUpdateClass,
+} = require("../request/validateClass");
+const {
+  validateCreateStudent,
+  validateUpdateStudent,
+} = require("../request/validateUserStudent");
+
+// middleware autentikasi
+const {
+  authenticate,
+  authorize,
+  validateBody,
+} = require("../middleware/authenticate");
+
 // Auth
-router.post("/register", validateCreateStudent, register);  
+router.post("/register", validateCreateStudent, register);
 router.post("/login", login);
 
 // CRUD Student
-router.get("/all-student", authenticate,  authorize("admin"), getAllStudentAccount);
-router.post("/create-student", authenticate, validateBody, authorize("admin"), validateCreateStudent, createStudentAccount);
-router.put("/update-student/:id", authenticate, validateBody, authorize("admin"), validateUpdateStudent, updateStudentAccount);
-router.delete("/delete-student/:id", authenticate, authorize("admin"), deleteStudentAccount);
+router.get(
+  "/all-student",
+  authenticate,
+  authorize("admin"),
+  getAllStudentAccount,
+);
+router.post(
+  "/create-student",
+  authenticate,
+  validateBody,
+  authorize("admin"),
+  validateCreateStudent,
+  createStudentAccount,
+);
+router.put(
+  "/update-student/:id",
+  authenticate,
+  validateBody,
+  authorize("admin"),
+  validateUpdateStudent,
+  updateStudentAccount,
+);
+router.delete(
+  "/delete-student/:id",
+  authenticate,
+  authorize("admin"),
+  deleteStudentAccount,
+);
 
 // CRUD Class
 router.get("/all-class", authenticate, authorize("admin"), getAllClass);
 router.get("/show-class/:id", authenticate, authorize("admin"), classById);
-router.post("/create-class", authenticate, validateBody, authorize("admin"), validateCreateClass, createClass );
-router.put("/update-class/:id", authenticate, validateBody, authorize("admin"), validateUpdateClass, updateClass );
-router.delete("/delete-class/:id", authenticate, authorize("admin"), deleteClass);
+router.post(
+  "/create-class",
+  authenticate,
+  validateBody,
+  authorize("admin"),
+  validateCreateClass,
+  createClass,
+);
+router.put(
+  "/update-class/:id",
+  authenticate,
+  validateBody,
+  authorize("admin"),
+  validateUpdateClass,
+  updateClass,
+);
+router.delete(
+  "/delete-class/:id",
+  authenticate,
+  authorize("admin"),
+  deleteClass,
+);
+
+// CRUD Attendance Session
+router.post("/attendance-sessions", authenticate, authorize("admin"), createAttendanceSession);
 
 // Error handler async
 router.use((err, req, res, next) => {

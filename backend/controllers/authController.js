@@ -1,43 +1,66 @@
 // const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Student = require("../models/Student");
+const Class = require("../models/Class");
 const { success, error } = require("../utils/responseHelper");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+
+// register bisa diakses admin dan siswa
+const register = async (req, res) => {
+  try {
+    const { name, email, password, classId, nis } = req.body;
+    const cariClass = await Class.findById(classId);
+
+    if (!cariClass) {
+      return error(res, 404, "Kelas tidak ditemukan");
+    }
+
+    const user = await User.create({ name, email, password, role: "siswa" });
+    const student = await Student.create({ userId: user._id, classId, nis });
+    success(res, 201, "Berhasil membuat akun", { user, student });
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
 
 // Login bisa diakses admin dan siswa
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+    console.log(user);
+    console.log(typeof user.comparePassword);
+
     if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Email atau password salah" });
+      return error(res, 401, "Email atau password salah");
     }
 
-    const isValid = await user.comparePassword(password);
-    if (!isValid) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Email atau password salah" });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return error(res, 401, "Email atau password salah");
     }
 
-    const token = generateToken(user._id);
-    res.json({
-      success: true,
-      message: "Login berhasil",
-      data: { token, user: { id: user._id, name: user.name, role: user.role } },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE },
+    );
+
+    success(res, 201, "Berhasil login", { token, user });
+  } catch (err) {
+    return error(res, 500, err.message);
   }
 };
 
 // CRUD Akun Siswa/i hanya admin
 const getAllStudentAccount = async (req, res) => {
   try {
-    const [users, students] = await Promise.all([User.find(), Student.find()]);
-    // Gabungkan dalam objek
+    const [users, students] = await Promise.all([
+      User.find({ role: "siswa" }),
+      Student.find(),
+    ]);
+
     const data = { users, students };
 
     success(res, 200, "Berhasil mengambil semua siswa dan user", data);
@@ -52,9 +75,9 @@ const createStudentAccount = async (req, res) => {
     const user = await User.create({ name, email, password, role: "siswa" });
     const student = await Student.create({ userId: user._id, classId, nis });
 
-    const cntClass = await Class.findById(id);
+    const cariClass = await Class.findById(id);
 
-    if (!cntClass) {
+    if (!cariClass) {
       return error(res, 404, "Kelas tidak ditemukan");
     }
 
@@ -119,6 +142,7 @@ const deleteStudentAccount = async (req, res) => {
 };
 
 module.exports = {
+  register,
   login,
   createStudentAccount,
   getAllStudentAccount,

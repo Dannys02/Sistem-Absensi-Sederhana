@@ -1,28 +1,28 @@
 const express = require("express");
 const router = express.Router();
 
-const { login, createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/authController");
+const { register, login, createStudentAccount, getAllStudentAccount, updateStudentAccount, deleteStudentAccount } = require("../controllers/authController");
 const { validateCreateClass, validateUpdateClass } = require("../request/validateClass");
 const { validateCreateStudent, validateUpdateStudent } = require("../request/validateUserStudent");
 const { createClass, getAllClass, updateClass, deleteClass, classById } = require("../controllers/classController");
 
-const authenticate = require('../middleware/authenticate');
-
+const { authenticate, authorize, validateBody} = require('../middleware/authenticate');
 // Auth
+router.post("/register", validateCreateStudent, register);  
 router.post("/login", login);
 
 // CRUD Student
-router.get("/all-student", authenticate, getAllStudentAccount);
-router.post("/create-student", authenticate, validateCreateStudent, createStudentAccount);
-router.put("/update-student/:id", authenticate, validateUpdateStudent, updateStudentAccount);
-router.delete("/delete-student/:id", authenticate, deleteStudentAccount);
+router.get("/all-student", authenticate,  authorize("admin"), getAllStudentAccount);
+router.post("/create-student", authenticate, validateBody, authorize("admin"), validateCreateStudent, createStudentAccount);
+router.put("/update-student/:id", authenticate, validateBody, authorize("admin"), validateUpdateStudent, updateStudentAccount);
+router.delete("/delete-student/:id", authenticate, validateBody, authorize("admin"), deleteStudentAccount);
 
 // CRUD Class
-router.get("/all-class", authenticate, getAllClass);
-router.get("/show-class/:id", authenticate, classById);
-router.post("/create-class", authenticate, validateCreateClass, createClass );
-router.put("/update-class/:id", authenticate, validateUpdateClass, updateClass );
-router.delete("/delete-class/:id", authenticate, deleteClass);
+router.get("/all-class", authenticate, authorize("admin"), getAllClass);
+router.get("/show-class/:id", authenticate, authorize("admin"), classById);
+router.post("/create-class", authenticate, validateBody, authorize("admin"), validateCreateClass, createClass );
+router.put("/update-class/:id", authenticate, validateBody, authorize("admin"), validateUpdateClass, updateClass );
+router.delete("/delete-class/:id", authenticate, validateBody, authorize("admin"), deleteClass);
 
 // Error handler async
 router.use((err, req, res, next) => {

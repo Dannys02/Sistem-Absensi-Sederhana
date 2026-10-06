@@ -18,6 +18,36 @@ const createAttendanceSession = async (req, res) => {
   }
 };
 
+const getTodayAttendanceSession = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const startOfDay = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+
+    const endOfDay = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+    );
+
+    const session = await AttendanceSession.findOne({
+      date: {
+        $gte: startOfDay,
+        $lt: endOfDay,
+      },
+    });
+
+    if (!session) {
+      return error(res, 404, "Sesi absensi hari ini tidak ditemukan");
+    }
+
+    success(res, 200, "Berhasil mengambil sesi absensi hari ini", session);
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
+
 module.exports = {
   createAttendanceSession,
+  getTodayAttendanceSession,
 };

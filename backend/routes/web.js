@@ -18,6 +18,7 @@ const {
 } = require("../controllers/studentController");
 const {
   createAttendanceSession,
+  getTodayAttendanceSession,
 } = require("../controllers/attendanceSessionController");
 
 // validasi request body
@@ -99,6 +100,7 @@ router.delete(
 
 // CRUD Attendance Session
 router.post("/attendance-sessions", authenticate, authorize("admin"), createAttendanceSession);
+router.get("/attendance-sessions/today", authenticate, getTodayAttendanceSession);
 
 // Error handler async
 router.use((err, req, res, next) => {

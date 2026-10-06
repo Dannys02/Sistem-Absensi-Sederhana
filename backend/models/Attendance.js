@@ -7,25 +7,38 @@ const attendanceSchema = new mongoose.Schema(
       ref: "Student",
       required: true,
     },
+
     sessionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AttendanceSession",
       required: true,
     },
-    checkInTime: { type: Date, default: null },
+
+    checkInTime: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["Hadir", "Telat", "Izin", "Sakit", "Alpha", "Menunggu Approval"],
-      default: "Alpha",
+      required: true,
     },
-    reason: { type: String, default: null },
+
+    reason: {
+      type: String,
+      default: null,
+    },
+
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
 module.exports = mongoose.model("Attendance", attendanceSchema);

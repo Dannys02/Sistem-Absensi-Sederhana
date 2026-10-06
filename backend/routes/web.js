@@ -3,6 +3,7 @@ const router = express.Router();
 
 // import fungsi controller
 const { register, login } = require("../controllers/authController");
+
 const {
   createClass,
   getAllClass,
@@ -10,16 +11,20 @@ const {
   deleteClass,
   classById,
 } = require("../controllers/classController");
+
 const {
   createStudentAccount,
   getAllStudentAccount,
   updateStudentAccount,
   deleteStudentAccount,
 } = require("../controllers/studentController");
+
 const {
   createAttendanceSession,
   getTodayAttendanceSession,
 } = require("../controllers/attendanceSessionController");
+
+const { checkIn } = require("../controllers/attendanceController");
 
 // validasi request body
 const {
@@ -99,8 +104,18 @@ router.delete(
 );
 
 // CRUD Attendance Session
-router.post("/attendance-sessions", authenticate, authorize("admin"), createAttendanceSession);
-router.get("/attendance-sessions/today", authenticate, getTodayAttendanceSession);
+router.post(
+  "/attendance-sessions",
+  authenticate,
+  authorize("admin"),
+  createAttendanceSession,
+);
+router.get(
+  "/attendance-sessions/today",
+  authenticate,
+  getTodayAttendanceSession,
+);
+router.post("/attendance/check-in", authenticate, authorize("siswa"), checkIn);
 
 // Error handler async
 router.use((err, req, res, next) => {

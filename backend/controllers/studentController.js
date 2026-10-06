@@ -47,26 +47,54 @@ const updateStudentAccount = async (req, res) => {
     const { name, email, password, classId, nis } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return error(res, 400, "Format ID kelas tidak valid");
+      return error(res, 400, "Format ID user tidak valid");
     }
 
-    const userUpdate = await User.findByIdAndUpdate(
-      id,
-      {
-        name,
-        email,
-        password,
-      },
-      { new: true, runValidators: true },
-    );
-    const updatedStudent = await Student.findOneAndUpdate(
-      { userId: id },
-      { $set: { classId, nis } },
-      { new: true, runValidators: true },
-    );
+    const studentAccount = await User.findById(id);
+    if (!studentAccount) {
+      return error(res, 404, "User atau siswa/i tidak ditemukan");
+    }
 
-    if (!userUpdate || !updatedStudent) {
-      return error(res, 404, "User atau siswa tidak ditemukan");
+    // Data User yang ingin diubah
+    const userData = {};
+    if (name !== undefined) userData.name = name;
+    if (email !== undefined) userData.email = email;
+    if (password !== undefined) userData.password = password;
+
+    // Data Student yang ingin diubah
+    const studentData = {};
+    if (nis !== undefined) studentData.nis = nis;
+    if (classId !== undefined) {
+      const cariClass = await Class.findById(classId);
+      if (!cariClass) {
+        return error(res, 404, "Kelas tidak ditemukan");
+      }
+
+      studentData.classId = classId;
+    }
+
+    // Update User kalau memang ada yang diubah
+    if (Object.keys(userData).length > 0) {
+      await User.findByIdAndUpdate(id, userData, {
+        new: true,
+        runValidators: true,
+      });
+    }
+
+    // Update Student kalau memang ada yang diubah
+    if (Object.keys(studentData).length > 0) {
+      const updatedStudent = await Student.findOneAndUpdate(
+        { userId: id },
+        studentData,
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
+
+      if (!updatedStudent) {
+        return error(res, 404, "Data siswa tidak ditemukan");
+      }
     }
 
     success(res, 200, "Berhasil memperbarui user atau siswa/i");
@@ -79,7 +107,14 @@ const deleteStudentAccount = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await User.findByIdAndDelete(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 400, "Format ID user tidak valid");
+    }
+
+    const studentAccount = await User.findByIdAndDelete(id);
+    if (!studentAccount) {
+      return error(res, 404, "User atau siswa/i tidak ditemukan");
+    }
 
     await Student.deleteOne({ userId: id });
 

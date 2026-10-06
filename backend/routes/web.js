@@ -16,14 +16,14 @@ router.post("/login", login);
 router.get("/all-student", authenticate,  authorize("admin"), getAllStudentAccount);
 router.post("/create-student", authenticate, validateBody, authorize("admin"), validateCreateStudent, createStudentAccount);
 router.put("/update-student/:id", authenticate, validateBody, authorize("admin"), validateUpdateStudent, updateStudentAccount);
-router.delete("/delete-student/:id", authenticate, validateBody, authorize("admin"), deleteStudentAccount);
+router.delete("/delete-student/:id", authenticate, authorize("admin"), deleteStudentAccount);
 
 // CRUD Class
 router.get("/all-class", authenticate, authorize("admin"), getAllClass);
 router.get("/show-class/:id", authenticate, authorize("admin"), classById);
 router.post("/create-class", authenticate, validateBody, authorize("admin"), validateCreateClass, createClass );
 router.put("/update-class/:id", authenticate, validateBody, authorize("admin"), validateUpdateClass, updateClass );
-router.delete("/delete-class/:id", authenticate, validateBody, authorize("admin"), deleteClass);
+router.delete("/delete-class/:id", authenticate, authorize("admin"), deleteClass);
 
 // Error handler async
 router.use((err, req, res, next) => {

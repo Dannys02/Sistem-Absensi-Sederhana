@@ -18,11 +18,7 @@ const checkIn = async (req, res) => {
     const today = new Date();
 
     const startOfDay = new Date(
-      Date.UTC(
-        today.getUTCFullYear(), 
-        today.getUTCMonth(), 
-        today.getUTCDate()
-      ),
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
     );
 
     const endOfDay = new Date(
@@ -56,9 +52,13 @@ const checkIn = async (req, res) => {
 
     const checkInTime = new Date();
 
-    // menentukan status
+    if (checkInTime > new Date(session.endTime)) {
+      return error(res, 400, "Sesi absensi sudah ditutup");
+    }
+
+    // menentukan status hadir atau telat
     const status =
-      checkInTime <= new Date(session.lateThreshold) ? "Hadir" : "Telat";
+      checkInTime < new Date(session.lateThreshold) ? "Hadir" : "Telat";
 
     // simpan absesi
     const attendance = await Attendance.create({

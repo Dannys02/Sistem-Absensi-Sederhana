@@ -22,6 +22,8 @@ const {
   getTodayAttendanceSession
 } = require("../controllers/attendanceSessionController");
 
+const { getSubmitLeaveRequestByAdmin, approvedAttendanceLeaveByAdmin, rejectAttendanceLeaveByAdmin } = require("../controllers/attendanceController");
+
 // validasi request body
 const {
   validateCreateClass,
@@ -66,7 +68,12 @@ router.put("/update-class/:id", validateBody, validateUpdateClass, updateClass);
 router.delete("/delete-class/:id", deleteClass);
 
 // Attendance Session
-router.get("/attendance-sessions/today", authenticate, getTodayAttendanceSession);
+router.get("/attendance-sessions/today", getTodayAttendanceSession);
 router.post("/attendance-sessions", createAttendanceSession);
+
+// Attendance Student yang izin/sakit
+router.get("/attendance/leave", getSubmitLeaveRequestByAdmin);
+router.put("/attendance/leave/approve/:id", approvedAttendanceLeaveByAdmin);
+router.put("/attendance/leave/reject/:id", rejectAttendanceLeaveByAdmin);
 
 module.exports = router;

@@ -2,6 +2,7 @@ const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
 const AttendanceSession = require("../models/AttendanceSession");
 const { success, error } = require("../utils/responseHelper");
+const mongoose = require("mongoose");
 
 const checkIn = async (req, res) => {
   try {
@@ -163,8 +164,84 @@ const submitLeaveRequest = async (req, res) => {
   }
 };
 
+const getSubmitLeaveRequestByAdmin = async (req, res) => {
+  const attendance = await Attendance.find({
+    status: "Menunggu Approval",
+  });
+
+  success(
+    res,
+    200,
+    "Berhasil mengambil data absensi yang mengajukan izin/sakit",
+    attendance,
+  );
+};
+
+const approvedAttendanceLeaveByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 400, "Format ID absensi siswa tidak valid");
+    }
+
+    const attendance = await Attendance.findById(id);
+    if (!attendance) {
+      return error(res, 404, "Pengajuan absensi tidak ditemukan");
+    }
+
+    if (attendance.status !== "Menunggu Approval") {
+      return error(res, 400, "Pengajuan absensi sudah diproses");
+    }
+
+    attendance.status = attendance.requestType;
+    attendance.approvedBy = req.user.id;
+
+    await attendance.save();
+
+    success(
+      res,
+      200,
+      "Berhasil menyetujui pengajuan absensi siswa",
+      attendance,
+    );
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
+
+const rejectAttendanceLeaveByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 400, "Format ID absensi siswa tidak valid");
+    }
+
+    const attendance = await Attendance.findById(id);
+    if (!attendance) {
+      return error(res, 404, "Pengajuan absensi tidak ditemukan");
+    }
+
+    if (attendance.status !== "Menunggu Approval") {
+      return error(res, 404, "Pengajuan absensi sudah diproses");
+    }
+
+    attendance.status = "Alpha";
+    attendance.approvedBy = req.user.id;
+
+    await attendance.save();
+    success(res, 200, "Berhasil menolak pengajuan absensi siswa", attendance);
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
+
 module.exports = {
   checkIn,
   getAttendanceByStudent,
   submitLeaveRequest,
+  getSubmitLeaveRequestByAdmin,
+  approvedAttendanceLeaveByAdmin,
+  rejectAttendanceLeaveByAdmin,
 };

@@ -4,6 +4,7 @@ const AttendanceSession = require("../models/AttendanceSession");
 const { success, error } = require("../utils/responseHelper");
 const mongoose = require("mongoose");
 
+// area siswa
 const checkIn = async (req, res) => {
   try {
     // cari data siswa berdasarkan user yang sedang login
@@ -164,6 +165,7 @@ const submitLeaveRequest = async (req, res) => {
   }
 };
 
+// area admin
 const getSubmitLeaveRequestByAdmin = async (req, res) => {
   const attendance = await Attendance.find({
     status: "Menunggu Approval",
@@ -237,6 +239,52 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
   }
 };
 
+// sistem otomatis
+const markAbsentStudents = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await AttendanceSession.findById(sessionId);
+    if (!session) {
+      return error(res, 404, "Sesi absensi tidak ditemukan");
+    }
+
+    if (new Date() < new Date(session.endTime)) {
+      return error(res, 400, "Sesi absensi belum berakhir");
+    }
+
+    const students = await Student.find();
+
+    const existingAttendances = await Attendance.find({
+      sessionId: session._id,
+    }).select("studentId");
+
+    const attendedStudentsId = existingAttendances.map((attendance) =>
+      attendance.studentId.toString(),
+    );
+
+    const absentStudents = students.filter(
+      (student) => !attendedStudentsId.includes(student._id.toString()),
+    );
+
+    if (absentStudents.length > 0) {
+      await Attendance.insertMany(
+        absentStudents.map((student) => ({
+          studentId: student._id,
+          sessionId: session._id,
+          status: "Alpha",
+        })),
+      );
+    }
+
+    return success(res, 200, "Berhasil memproses absensi Alpha", {
+      jumlahAlpha: absentStudents.length,
+    });
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
+
 module.exports = {
   checkIn,
   getAttendanceByStudent,
@@ -244,4 +292,5 @@ module.exports = {
   getSubmitLeaveRequestByAdmin,
   approvedAttendanceLeaveByAdmin,
   rejectAttendanceLeaveByAdmin,
+  markAbsentStudents
 };

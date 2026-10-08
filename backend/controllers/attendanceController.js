@@ -239,6 +239,27 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
   }
 };
 
+const getAttendanceRecapByAdmin = async (req, res) => {
+  try {
+    const attendance = await Attendance.find().populate({
+      path: "studentId",
+      populate: [
+        { path: "userId", select: "name email" },
+        { path: "classId", select: "name" },
+      ],
+    })
+    .populate({
+      path: "sessionId",
+      select: "date startTime lateThreshold endTime",
+    })
+    .sort({ createdAt: -1 });
+
+    success(res, 200, "Berhasil mengambil rekap absensi", attendance);
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+}
+
 // sistem otomatis
 const markAbsentStudents = async (req, res) => {
   try {
@@ -292,5 +313,6 @@ module.exports = {
   getSubmitLeaveRequestByAdmin,
   approvedAttendanceLeaveByAdmin,
   rejectAttendanceLeaveByAdmin,
-  markAbsentStudents
+  markAbsentStudents,
+  getAttendanceRecapByAdmin
 };

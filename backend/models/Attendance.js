@@ -18,7 +18,11 @@ const attendanceSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
+    requestType: {
+      type: String,
+      enum: ["Izin", "Sakit"],
+      default: null,
+    },
     status: {
       type: String,
       enum: ["Hadir", "Telat", "Izin", "Sakit", "Alpha", "Menunggu Approval"],

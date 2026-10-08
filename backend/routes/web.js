@@ -24,7 +24,11 @@ const {
   getTodayAttendanceSession,
 } = require("../controllers/attendanceSessionController");
 
-const { checkIn } = require("../controllers/attendanceController");
+const {
+  checkIn,
+  getAttendanceByStudent,
+  submitLeaveRequest,
+} = require("../controllers/attendanceController");
 
 // validasi request body
 const {
@@ -57,16 +61,16 @@ router.get(
 router.post(
   "/create-student",
   authenticate,
-  validateBody,
   authorize("admin"),
+  validateBody,
   validateCreateStudent,
   createStudentAccount,
 );
 router.put(
   "/update-student/:id",
   authenticate,
-  validateBody,
   authorize("admin"),
+  validateBody,
   validateUpdateStudent,
   updateStudentAccount,
 );
@@ -83,16 +87,16 @@ router.get("/show-class/:id", authenticate, authorize("admin"), classById);
 router.post(
   "/create-class",
   authenticate,
-  validateBody,
   authorize("admin"),
+  validateBody,
   validateCreateClass,
   createClass,
 );
 router.put(
   "/update-class/:id",
   authenticate,
-  validateBody,
   authorize("admin"),
+  validateBody,
   validateUpdateClass,
   updateClass,
 );
@@ -116,6 +120,8 @@ router.get(
   getTodayAttendanceSession,
 );
 router.post("/attendance/check-in", authenticate, authorize("siswa"), checkIn);
+router.get("/attendance/me", authenticate, authorize("siswa"), getAttendanceByStudent);
+router.post("/attendance/leave", authenticate, authorize("siswa"), validateBody, submitLeaveRequest);
 
 // Error handler async
 router.use((err, req, res, next) => {

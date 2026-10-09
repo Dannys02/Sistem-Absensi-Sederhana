@@ -241,7 +241,74 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
 
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
-    const { date, classId } = req.query;
+    const { startDate, endDate, status, date, classId, studentId } = req.query;
+
+    // Filter berdasarkan rentang tanggal
+    const attendanceFilter = {};
+
+    if (startDate || endDate) {
+      if (!startDate || !endDate) {
+        return error(res, 400, "startDate dan endDate harus diisi bersamaan");
+      }
+
+      const validDate = (value) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+        const parsed = new Date(`${value}T00:00:00.000Z`);
+
+        return (
+          !Number.isNaN(parsed.getTime()) &&
+          parsed.toISOString().slice(0, 10) === value
+        );
+      };
+
+      if (!validDate(startDate) || !validDate(endDate)) {
+        return error(res, 400, "Format tanggal harus YYYY-MM-DD");
+      }
+
+      if (startDate > endDate) {
+        return error(res, 400, "startDate tidak boleh setelah endDate");
+      }
+
+      const start = new Date(`${startDate}T00:00:00.000Z`);
+      const end = new Date(`${endDate}T00:00:00.000Z`);
+      end.setUTCDate(end.getUTCDate() + 1);
+
+      const sessions = await AttendanceSession.find({
+        date: { $gte: start, $lt: end },
+      }).select("_id");
+
+      attendanceFilter.sessionId = {
+        $in: sessions.map((session) => session._id),
+      };
+    }
+
+    // Filter berdasarkan status
+    if (status) {
+      const allowedStatuses = [
+        "Hadir",
+        "Telat",
+        "Izin",
+        "Sakit",
+        "Alpha",
+        "Menunggu Approval",
+      ];
+
+      if (!allowedStatuses.includes(status)) {
+        return error(res, 400, "Status absensi tidak valid");
+      }
+
+      attendanceFilter.status = status;
+    }
+
+    // Filter berdasarkan siswa
+    if (studentId) {
+      if (!mongoose.Types.ObjectId.isValid(studentId)) {
+        return error(res, 400, "Format ID siswa tidak valid");
+      }
+
+      attendanceFilter.studentId = studentId;
+    }
 
     // filter berdasarkan kelas
     const studentFilter = {};
@@ -259,35 +326,9 @@ const getAttendanceRecapByAdmin = async (req, res) => {
 
     // filter berdasarkan tanggal sesi
     const sessionFilter = {};
-    
-    if (date) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return error(res, 400, "Format tanggal harus YYYY-MM-DD");
-      }
-
-      const parsedDate = new Date(`${date}T00:00:00.000Z`);
-
-      if (
-        Number.isNaN(parsedDate.getTime()) ||
-        parsedDate.toISOString().slice(0, 10) !== date
-      ) {
-        return error(res, 400, "Tanggal tidak valid");
-      }
-
-      const nextDate = new Date(parsedDate);
-      nextDate.setUTCDate(nextDate.getUTCDate() + 1);
-
-      sessionFilter.date = {
-        $gte: parsedDate,
-        $lt: nextDate,
-      };
-    }
 
     const sessions = await AttendanceSession.find(sessionFilter).select("_id");
     const sessionIds = sessions.map((session) => session._id);
-
-    // Gabungkan filter ke query Attendance
-    const attendanceFilter = {};
 
     if (classId) {
       attendanceFilter.studentId = { $in: studentIds };

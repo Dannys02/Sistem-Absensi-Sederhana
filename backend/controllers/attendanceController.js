@@ -241,24 +241,81 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
 
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
-    const attendance = await Attendance.find().populate({
-      path: "studentId",
-      populate: [
-        { path: "userId", select: "name email" },
-        { path: "classId", select: "name" },
-      ],
-    })
-    .populate({
-      path: "sessionId",
-      select: "date startTime lateThreshold endTime",
-    })
-    .sort({ createdAt: -1 });
+    const { date, classId } = req.query;
+
+    // filter berdasarkan kelas
+    const studentFilter = {};
+
+    if (classId) {
+      if (!mongoose.Types.ObjectId.isValid(classId)) {
+        return error(res, 400, " Format ID kelas tidak valid");
+      }
+
+      studentFilter.classId = classId;
+    }
+
+    const students = await Student.find(studentFilter).select("_id");
+    const studentIds = students.map((student) => student._id);
+
+    // filter berdasarkan tanggal sesi
+    const sessionFilter = {};
+    
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return error(res, 400, "Format tanggal harus YYYY-MM-DD");
+      }
+
+      const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+      if (
+        Number.isNaN(parsedDate.getTime()) ||
+        parsedDate.toISOString().slice(0, 10) !== date
+      ) {
+        return error(res, 400, "Tanggal tidak valid");
+      }
+
+      const nextDate = new Date(parsedDate);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+
+      sessionFilter.date = {
+        $gte: parsedDate,
+        $lt: nextDate,
+      };
+    }
+
+    const sessions = await AttendanceSession.find(sessionFilter).select("_id");
+    const sessionIds = sessions.map((session) => session._id);
+
+    // Gabungkan filter ke query Attendance
+    const attendanceFilter = {};
+
+    if (classId) {
+      attendanceFilter.studentId = { $in: studentIds };
+    }
+
+    if (date) {
+      attendanceFilter.sessionId = { $in: sessionIds };
+    }
+
+    const attendance = await Attendance.find(attendanceFilter)
+      .populate({
+        path: "studentId",
+        populate: [
+          { path: "userId", select: "name email" },
+          { path: "classId", select: "name" },
+        ],
+      })
+      .populate({
+        path: "sessionId",
+        select: "date startTime lateThreshold endTime",
+      })
+      .sort({ createdAt: -1 });
 
     success(res, 200, "Berhasil mengambil rekap absensi", attendance);
   } catch (err) {
     return error(res, 500, err.message);
   }
-}
+};
 
 // sistem otomatis
 const markAbsentStudents = async (req, res) => {
@@ -314,5 +371,5 @@ module.exports = {
   approvedAttendanceLeaveByAdmin,
   rejectAttendanceLeaveByAdmin,
   markAbsentStudents,
-  getAttendanceRecapByAdmin
+  getAttendanceRecapByAdmin,
 };

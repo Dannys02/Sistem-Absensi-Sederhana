@@ -239,51 +239,117 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
   }
 };
 
+
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
-    const { startDate, endDate, status, date, classId, studentId } = req.query;
+    const {
+      startDate,
+      endDate,
+      status,
+      date,
+      classId,
+      studentId,
+    } = req.query;
 
-    // Filter berdasarkan rentang tanggal
-    const attendanceFilter = {};
+    // 1. Validasi pagination
+    const page = req.query.page === undefined
+      ? 1
+      : Number(req.query.page);
 
-    if (startDate || endDate) {
-      if (!startDate || !endDate) {
-        return error(res, 400, "startDate dan endDate harus diisi bersamaan");
+    const limit = req.query.limit === undefined
+      ? 10
+      : Number(req.query.limit);
+
+    if (
+      !Number.isInteger(page) ||
+      page < 1 ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      return error(
+        res,
+        400,
+        "page harus bilangan bulat positif dan limit harus 1-100",
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    // 2. Validasi filter tanggal
+    const validDate = (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
       }
 
-      const validDate = (value) => {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const parsed = new Date(`${value}T00:00:00.000Z`);
 
-        const parsed = new Date(`${value}T00:00:00.000Z`);
+      return (
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === value
+      );
+    };
 
-        return (
-          !Number.isNaN(parsed.getTime()) &&
-          parsed.toISOString().slice(0, 10) === value
+    if (date && (startDate || endDate)) {
+      return error(
+        res,
+        400,
+        "Gunakan date atau startDate dan endDate, jangan keduanya",
+      );
+    }
+
+    const sessionFilter = {};
+
+    if (date) {
+      if (!validDate(date)) {
+        return error(res, 400, "Format date harus YYYY-MM-DD");
+      }
+
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+
+      sessionFilter.date = { $gte: start, $lt: end };
+    } else if (startDate || endDate) {
+      if (!startDate || !endDate) {
+        return error(
+          res,
+          400,
+          "startDate dan endDate harus diisi bersamaan",
         );
-      };
+      }
 
       if (!validDate(startDate) || !validDate(endDate)) {
         return error(res, 400, "Format tanggal harus YYYY-MM-DD");
       }
 
       if (startDate > endDate) {
-        return error(res, 400, "startDate tidak boleh setelah endDate");
+        return error(
+          res,
+          400,
+          "startDate tidak boleh setelah endDate",
+        );
       }
 
       const start = new Date(`${startDate}T00:00:00.000Z`);
       const end = new Date(`${endDate}T00:00:00.000Z`);
       end.setUTCDate(end.getUTCDate() + 1);
 
-      const sessions = await AttendanceSession.find({
-        date: { $gte: start, $lt: end },
-      }).select("_id");
+      sessionFilter.date = { $gte: start, $lt: end };
+    }
+
+    // 3. Bangun filter absensi
+    const attendanceFilter = {};
+
+    if (Object.keys(sessionFilter).length > 0) {
+      const sessions = await AttendanceSession.find(sessionFilter)
+        .select("_id");
 
       attendanceFilter.sessionId = {
         $in: sessions.map((session) => session._id),
       };
     }
 
-    // Filter berdasarkan status
     if (status) {
       const allowedStatuses = [
         "Hadir",
@@ -301,43 +367,41 @@ const getAttendanceRecapByAdmin = async (req, res) => {
       attendanceFilter.status = status;
     }
 
-    // Filter berdasarkan siswa
-    if (studentId) {
-      if (!mongoose.Types.ObjectId.isValid(studentId)) {
-        return error(res, 400, "Format ID siswa tidak valid");
-      }
-
-      attendanceFilter.studentId = studentId;
-    }
-
-    // filter berdasarkan kelas
+    // 4. Filter kelas dan siswa
     const studentFilter = {};
 
     if (classId) {
       if (!mongoose.Types.ObjectId.isValid(classId)) {
-        return error(res, 400, " Format ID kelas tidak valid");
+        return error(res, 400, "Format ID kelas tidak valid");
       }
 
       studentFilter.classId = classId;
     }
 
-    const students = await Student.find(studentFilter).select("_id");
-    const studentIds = students.map((student) => student._id);
+    if (studentId) {
+      if (!mongoose.Types.ObjectId.isValid(studentId)) {
+        return error(res, 400, "Format ID siswa tidak valid");
+      }
 
-    // filter berdasarkan tanggal sesi
-    const sessionFilter = {};
-
-    const sessions = await AttendanceSession.find(sessionFilter).select("_id");
-    const sessionIds = sessions.map((session) => session._id);
-
-    if (classId) {
-      attendanceFilter.studentId = { $in: studentIds };
+      studentFilter._id = studentId;
     }
 
-    if (date) {
-      attendanceFilter.sessionId = { $in: sessionIds };
+    if (classId || studentId) {
+      const students = await Student.find(studentFilter).select("_id");
+
+      attendanceFilter.studentId = {
+        $in: students.map((student) => student._id),
+      };
     }
 
+    // 5. Hitung total data sebelum pagination
+    const totalData = await Attendance.countDocuments(
+      attendanceFilter,
+    );
+
+    const totalPages = Math.ceil(totalData / limit);
+
+    // 6. Ambil data untuk halaman yang diminta
     const attendance = await Attendance.find(attendanceFilter)
       .populate({
         path: "studentId",
@@ -350,9 +414,26 @@ const getAttendanceRecapByAdmin = async (req, res) => {
         path: "sessionId",
         select: "date startTime lateThreshold endTime",
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    success(res, 200, "Berhasil mengambil rekap absensi", attendance);
+    return success(
+      res,
+      200,
+      "Berhasil mengambil rekap absensi",
+      {
+        data: attendance,
+        pagination: {
+          page,
+          limit,
+          totalData,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1 && totalData > 0,
+        },
+      },
+    );
   } catch (err) {
     return error(res, 500, err.message);
   }

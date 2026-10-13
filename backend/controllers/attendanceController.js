@@ -1,12 +1,19 @@
 const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
 const AttendanceSession = require("../models/AttendanceSession");
+const {
+  getJakartaDayRange,
+  getJakartaDateString,
+  getJakartaDateTime,
+} = require("../utils/jakartaDate");
 const { success, error } = require("../utils/responseHelper");
 const mongoose = require("mongoose");
 
 // area siswa
 const checkIn = async (req, res) => {
   try {
+    const { startOfDay, endOfDay } = getJakartaDayRange();
+
     // cari data siswa berdasarkan user yang sedang login
     const student = await Student.findOne({
       userId: req.user.id,
@@ -15,21 +22,6 @@ const checkIn = async (req, res) => {
     if (!student) {
       return error(res, 404, "Data siswa tidak ditemukan");
     }
-
-    // cari sesi absensi hari ini
-    const today = new Date();
-
-    const startOfDay = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
-    );
-
-    const endOfDay = new Date(
-      Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth(),
-        today.getUTCDate() + 1,
-      ),
-    );
 
     const session = await AttendanceSession.findOne({
       date: {
@@ -54,13 +46,32 @@ const checkIn = async (req, res) => {
 
     const checkInTime = new Date();
 
-    if (checkInTime >= new Date(session.endTime)) {
+    const sessionDate = getJakartaDateString(session.date);
+
+    const startDateTime = getJakartaDateTime(
+      sessionDate,
+      session.startTime,
+    );
+
+    const endDateTime = getJakartaDateTime(
+      sessionDate,
+      session.endTime,
+    );
+
+    const lateDateTime = getJakartaDateTime(
+      sessionDate,
+      session.lateThreshold,
+    );
+
+    if (checkInTime < startDateTime) {
+      return error(res, 400, "Absensi belum dibuka");
+    }
+
+    if (checkInTime >= endDateTime) {
       return error(res, 400, "Sesi absensi sudah ditutup");
     }
 
-    // menentukan status hadir atau telat
-    const status =
-      checkInTime <= new Date(session.lateThreshold) ? "Hadir" : "Telat";
+    const status = checkInTime <= lateDateTime ? "Hadir" : "Telat";
 
     // simpan absesi
     const attendance = await Attendance.create({
@@ -101,26 +112,13 @@ const getAttendanceByStudent = async (req, res) => {
 const submitLeaveRequest = async (req, res) => {
   try {
     const { requestType, reason } = req.body;
+    const { startOfDay, endOfDay } = getJakartaDayRange();
 
     // cari student berdasarkan user yang login
     const student = await Student.findOne({ userId: req.user.id });
     if (!student) {
       return error(res, 404, "Data siswa tidak ditemukan");
     }
-
-    const today = new Date();
-
-    const startOfDay = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
-    );
-
-    const endOfDay = new Date(
-      Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth(),
-        today.getUTCDate() + 1,
-      ),
-    );
 
     const session = await AttendanceSession.findOne({
       date: {
@@ -143,7 +141,24 @@ const submitLeaveRequest = async (req, res) => {
     }
 
     const now = new Date();
-    if (now >= new Date(session.endTime)) {
+
+    const sessionDate = getJakartaDateString(session.date);
+
+    const startDateTime = getJakartaDateTime(
+      sessionDate,
+      session.startTime,
+    );
+
+    const endDateTime = getJakartaDateTime(
+      sessionDate,
+      session.endTime,
+    );
+
+    if (now < startDateTime) {
+      return error(res, 400, "Absensi belum dibuka");
+    }
+
+    if (now >= endDateTime) {
       return error(res, 400, "Sesi absensi sudah ditutup");
     }
 
@@ -239,7 +254,6 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
   }
 };
 
-
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
     const {
@@ -305,11 +319,7 @@ const getAttendanceRecapByAdmin = async (req, res) => {
         return error(res, 400, "Format date harus YYYY-MM-DD");
       }
 
-      const start = new Date(`${date}T00:00:00.000Z`);
-      const end = new Date(start);
-      end.setUTCDate(end.getUTCDate() + 1);
-
-      sessionFilter.date = { $gte: start, $lt: end };
+      sessionFilter.date = getJakartaDayRange(date);
     } else if (startDate || endDate) {
       if (!startDate || !endDate) {
         return error(
@@ -331,11 +341,13 @@ const getAttendanceRecapByAdmin = async (req, res) => {
         );
       }
 
-      const start = new Date(`${startDate}T00:00:00.000Z`);
-      const end = new Date(`${endDate}T00:00:00.000Z`);
-      end.setUTCDate(end.getUTCDate() + 1);
+      const { startOfDay } = getJakartaDayRange(startDate);
+      const { endOfDay } = getJakartaDayRange(endDate);
 
-      sessionFilter.date = { $gte: start, $lt: end };
+      sessionFilter.date = {
+        $gte: startOfDay,
+        $lt: endOfDay,
+      };
     }
 
     // 3. Bangun filter absensi
@@ -449,7 +461,13 @@ const markAbsentStudents = async (req, res) => {
       return error(res, 404, "Sesi absensi tidak ditemukan");
     }
 
-    if (new Date() < new Date(session.endTime)) {
+    const sessionDate = getJakartaDateString(session.date);
+    const endDateTime = getJakartaDateTime(
+      sessionDate,
+      session.endTime,
+    );
+
+    if (new Date() < endDateTime) {
       return error(res, 400, "Sesi absensi belum berakhir");
     }
 

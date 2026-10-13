@@ -12,8 +12,6 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
-connectDB();
-
 app.use(cors());
 app.use(express.json());
 
@@ -33,8 +31,8 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
-    // Hubungkan database terlebih dahulu
     await connectDB();
+    // Hubungkan database terlebih dahulu
     console.log("MongoDB connected");
 
     // Aktifkan scheduler setelah database terhubung

@@ -75,10 +75,8 @@ const updateStudentAccount = async (req, res) => {
 
     // Update User kalau memang ada yang diubah
     if (Object.keys(userData).length > 0) {
-      await User.findByIdAndUpdate(id, userData, {
-        new: true,
-        runValidators: true,
-      });
+      Object.assign(studentAccount, userData);
+      await studentAccount.save();
     }
 
     // Update Student kalau memang ada yang diubah

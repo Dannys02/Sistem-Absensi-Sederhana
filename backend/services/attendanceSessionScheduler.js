@@ -22,9 +22,9 @@ const createTodaySession = async (req, res) => {
 
     const session = await AttendanceSession.create({
       date: startOfDay,
-      startTime: "15:00",
-      lateThreshold: "16:30",
-      endTime: "17:00",
+      startTime: "06:00",
+      lateThreshold: "06:45",
+      endTime: "07:30",
     });
 
     console.log(
@@ -37,7 +37,7 @@ const createTodaySession = async (req, res) => {
 
 const startAttendanceSessionScheduler = () => {
     cron.schedule(
-        "* * * * *",
+        "50 5 * * 1-5",
         async () => {
             console.log("Cron berjalan:", new Date().toISOString());
             await createTodaySession();

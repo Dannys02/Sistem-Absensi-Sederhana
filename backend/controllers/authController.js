@@ -15,7 +15,7 @@ const register = async (req, res) => {
       return error(res, 404, "Kelas tidak ditemukan");
     }
 
-    const user = await User.create({ name, email, role: "siswa" });
+    const user = await User.create({ name, email, password, role: "siswa" });
     const student = await Student.create({ userId: user._id, classId, nis });
     success(res, 201, "Berhasil membuat akun", { user, student });
   } catch (err) {

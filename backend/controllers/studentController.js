@@ -20,13 +20,24 @@ const getAllStudentAccount = async (req, res) => {
   }
 };
 
-const createStudentAccount = async (req, res) => {
+const createStudentAccount = async (req, res, next) => {
   try {
     const { name, email, password, classId, nis } = req.body;
 
-    const cariClass = await Class.findById(classId);
+    const [cariClass, existingEmail, existingNis] = await Promise.all([
+      Class.findById(classId),
+      User.findOne({ email }),
+      Student.findOne({ nis }),
+    ]);
+
     if (!cariClass) {
       return error(res, 404, "Kelas tidak ditemukan");
+    }
+    if (existingEmail) {
+      return error(res, 409, "email sudah terdaftar");
+    }
+    if (existingNis) {
+      return error(res, 409, "nis sudah terdaftar");
     }
 
     const user = await User.create({ name, email, password, role: "siswa" });
@@ -37,11 +48,11 @@ const createStudentAccount = async (req, res) => {
       student,
     });
   } catch (err) {
-    return error(res, 500, err.message);
+    return next(err);
   }
 };
 
-const updateStudentAccount = async (req, res) => {
+const updateStudentAccount = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, email, password, classId, nis } = req.body;
@@ -55,6 +66,22 @@ const updateStudentAccount = async (req, res) => {
       return error(res, 404, "User atau siswa/i tidak ditemukan");
     }
 
+    const [cariClass, existingEmail, existingNis] = await Promise.all([
+      classId !== undefined ? Class.findById(classId) : true,
+      email !== undefined ? User.findOne({ email, _id: { $ne: id } }) : null,
+      nis !== undefined ? Student.findOne({ nis, userId: { $ne: id } }) : null,
+    ]);
+
+    if (!cariClass) {
+      return error(res, 404, "Kelas tidak ditemukan");
+    }
+    if (existingEmail) {
+      return error(res, 409, "email sudah terdaftar");
+    }
+    if (existingNis) {
+      return error(res, 409, "nis sudah terdaftar");
+    }
+
     // Data User yang ingin diubah
     const userData = {};
     if (name !== undefined) userData.name = name;
@@ -65,11 +92,6 @@ const updateStudentAccount = async (req, res) => {
     const studentData = {};
     if (nis !== undefined) studentData.nis = nis;
     if (classId !== undefined) {
-      const cariClass = await Class.findById(classId);
-      if (!cariClass) {
-        return error(res, 404, "Kelas tidak ditemukan");
-      }
-
       studentData.classId = classId;
     }
 
@@ -97,7 +119,7 @@ const updateStudentAccount = async (req, res) => {
 
     success(res, 200, "Berhasil memperbarui user atau siswa/i");
   } catch (err) {
-    return error(res, 500, err.message);
+    return next(err);
   }
 };
 

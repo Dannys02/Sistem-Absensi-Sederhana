@@ -17,7 +17,7 @@ const createClass = async (req, res) => {
 
     const adaNama = await Class.findOne({ name });
     if (adaNama) {
-      return error(res, 400, `Nama ${name} sudah digunakan jir`);
+      return error(res, 400, `Nama ${name} sudah digunakan`);
     }
 
     const classData = await Class.create({ name });
@@ -73,7 +73,7 @@ const updateClass = async (req, res) => {
     return error(res, 500, err.message);
   }
 };
-
+  
 const deleteClass = async (req, res) => {
   try {
     const { id } = req.params;

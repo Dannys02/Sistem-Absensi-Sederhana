@@ -1,27 +1,66 @@
 import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import api from "../../api/axios";
 
 function Login() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  async function submit(e) {
     e.preventDefault();
-    console.log("Data Registrasi:", formData);
-  };
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await api.post("/login", { email, password });
+      login(response.data.data.user, response.data.data.token);
+
+      const role = response.data.data.user.role;
+      if (role === "siswa") navigate("/dashboard/siswa");
+      else navigate("/dashboard/admin");
+    } catch (err) {
+      const errors = err.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0][0];
+        setError(firstError);
+      } else {
+        setError(
+          err.response?.data?.message || "Login gagal, silahkan coba lagi.",
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-white border border-[#4F7942]/20 rounded-2xl shadow-lg p-8">
+        {error && (
+          <div className="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium flex items-center gap-3">
+            <svg
+              className="w-5 h-5 shrink-0 text-rose-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#4F7942]/10 text-[#4F7942] mb-3">
@@ -46,8 +85,8 @@ function Login() {
           </p>
         </div>
 
-        {/* Form Registrasi */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Form Login */}
+        <form onSubmit={submit} className="space-y-5">
           <div>
             <label
               htmlFor="email"
@@ -60,8 +99,8 @@ function Login() {
               name="email"
               type="email"
               required
-              value={formData.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="nama@email.com"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
             />
@@ -79,8 +118,8 @@ function Login() {
               name="password"
               type="password"
               required
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Masukkan password"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
             />
@@ -88,18 +127,25 @@ function Login() {
 
           <button
             type="submit"
-            className="w-full py-2.5 px-4 bg-[#4F7942] hover:bg-[#3d6032] active:bg-[#324f29] text-white font-semibold rounded-lg shadow-sm transition duration-150 cursor-pointer"
+            disabled={loading}
+            className="w-full py-2.5 px-4 bg-[#4F7942] disabled:opacity-50 hover:bg-[#3d6032] active:bg-[#324f29] text-white font-semibold rounded-lg shadow-sm transition duration-150 cursor-pointer"
           >
-            Masuk Sekarang
+            {loading ? (
+              <>
+                <span>Memproses...</span>
+              </>
+            ) : (
+              <span>Masuk Sekarang</span>
+            )}
           </button>
         </form>
 
         <div className="flex items-center justify-center border-t pt-6 border-gray-100 text-center">
           <p className="text-sm text-gray-600 mb-3">
             Belum memiliki akun?
-            <a href="/register" className="pl-1 text-blue-600 hover:underline">
+            <Link to="/register" className="pl-1 text-blue-600 hover:underline">
               Masuk ke Halaman Register
-            </a>
+            </Link>
           </p>
         </div>
       </div>

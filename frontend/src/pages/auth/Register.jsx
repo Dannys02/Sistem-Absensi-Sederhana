@@ -23,7 +23,7 @@ function Register() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  async function handleSubmit(e) {
+  async function submit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -43,7 +43,7 @@ function Register() {
       } else {
         setError(
           err.response?.data?.message ||
-            "Pendaftaran gagal, Silahkan coba lagi.",
+            "Pendaftaran gagal, silahkan coba lagi.",
         );
       }
     } finally {
@@ -117,7 +117,7 @@ function Register() {
         </div>
 
         {/* Form Registrasi */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={submit} className="space-y-5">
           <div>
             <label
               htmlFor="nama"
@@ -223,11 +223,10 @@ function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-[#4F7942] hover:bg-[#3d6032] active:bg-[#324f29] text-white font-semibold rounded-lg shadow-sm transition duration-150 cursor-pointer"
+            className="w-full py-2.5 px-4 bg-[#4F7942] disabled:opacity-50 hover:bg-[#3d6032] active:bg-[#324f29] text-white font-semibold rounded-lg shadow-sm transition duration-150 cursor-pointer"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <span>Mendaftarkan...</span>
               </>
             ) : (

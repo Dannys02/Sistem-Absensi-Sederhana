@@ -27,9 +27,24 @@ const register = async (req, res, next) => {
 
     const user = await User.create({ name, email, password, role: "siswa" });
     const student = await Student.create({ userId: user._id, classId, nis });
-    success(res, 201, "Berhasil membuat akun", { user, student });
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE },
+    );
+    success(res, 201, "Berhasil membuat akun", { token, user, student });
   } catch (err) {
     return next(err);
+  }
+};
+
+// data kelas di kolom register
+const getAllClass = async (req, res) => {
+  try {
+    const classData = await Class.find({});
+    success(res, 200, "Berhasil mengambil kelas", classData);
+  } catch (error) {
+    return error(res, 500, error.message);
   }
 };
 
@@ -80,6 +95,7 @@ const me = async (req, res) => {
 
 module.exports = {
   register,
+  getAllClass,
   login,
   me,
 };

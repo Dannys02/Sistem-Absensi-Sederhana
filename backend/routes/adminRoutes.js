@@ -22,7 +22,7 @@ const {
   getTodayAttendanceSession
 } = require("../controllers/attendanceSessionController");
 
-const { getSubmitLeaveRequestByAdmin, approvedAttendanceLeaveByAdmin, rejectAttendanceLeaveByAdmin, markAbsentStudents, getAttendanceRecapByAdmin } = require("../controllers/attendanceController");
+const { getSubmitLeaveRequestByAdmin, approvedAttendanceLeaveByAdmin, rejectAttendanceLeaveByAdmin, markAbsentStudents, getStudentsWithoutAttendanceToday, getAttendanceRecapByAdmin } = require("../controllers/attendanceController");
 
 // validasi request body
 const {
@@ -75,7 +75,9 @@ router.post("/attendance-sessions", createAttendanceSession);
 router.get("/attendance/leave", getSubmitLeaveRequestByAdmin);
 router.put("/attendance/leave/approve/:id", approvedAttendanceLeaveByAdmin);
 router.put("/attendance/leave/reject/:id", rejectAttendanceLeaveByAdmin);
+
 router.post("/attendance-sessions/:sessionId/mark-absent", markAbsentStudents);
+router.get("/student-without-attendance", getStudentsWithoutAttendanceToday)
 router.get("/attendance/recap", getAttendanceRecapByAdmin);
 
 module.exports = router;

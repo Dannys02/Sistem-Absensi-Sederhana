@@ -1,5 +1,5 @@
-import { useState } from "react";
 import "./App.css";
+import { Navigate } from "react-router-dom";
 import PrivateRoute from "./routes/PrivateRoute";
 import GuestRoute from "./routes/GuestRoute";
 import Register from "./pages/auth/Register";
@@ -12,6 +12,7 @@ import { Routes, Route } from "react-router-dom";
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route
         path="/register"
         element={

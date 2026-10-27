@@ -254,6 +254,54 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
   }
 };
 
+const getStudentsWithoutAttendanceToday = async (req, res) => {
+  try {
+    // ambil rentang tanggal hari ini berdasarkan WIB
+    const { startOfDay, endOfDay } = getJakartaDayRange();
+
+    // cari sesi absensi hari ini
+    const session = await AttendanceSession.findOne({
+      date: {
+        $gte: startOfDay,
+        $lt: endOfDay,
+      },
+    });
+
+    if (!session) {
+      return error(res, 404, "Sesi absensi hari ini belum tersedia");
+    }
+
+    // ambil ID siswa yang sudah memiliki catatan absensi
+    const attendances = await Attendance.find({
+      sessionId: session._id,
+    }).select("studentId");
+
+    const attendedStudentIds = attendances.map(
+      (attendance) => attendance.studentId
+    );
+
+    // cari siswa yang belum memiliki catatan absensi
+    const students = await Student.find({
+      _id: { $nin: attendedStudentIds },
+    })
+      .populate("userId", "name email")
+      .populate("classId", "name");
+
+    return success(
+      res,
+      200,
+      "Berhasil mengambil siswa yang belum absen",
+      {
+        totalData: students.length,
+        data: students,
+      }
+    );
+  } catch (err) {
+    return error(res, 500, err.message);
+  }
+};
+
+
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
     const {
@@ -319,7 +367,11 @@ const getAttendanceRecapByAdmin = async (req, res) => {
         return error(res, 400, "Format date harus YYYY-MM-DD");
       }
 
-      sessionFilter.date = getJakartaDayRange(date);
+      const { startOfDay, endOfDay } = getJakartaDayRange(date);
+      sessionFilter.date = {
+        $gte: startOfDay,
+        $lt: endOfDay,
+      }
     } else if (startDate || endDate) {
       if (!startDate || !endDate) {
         return error(
@@ -362,7 +414,10 @@ const getAttendanceRecapByAdmin = async (req, res) => {
       };
     }
 
-    if (status) {
+    const statusQuery = req.query.status;
+
+    if (statusQuery) {
+      const statuses = Array.isArray(statusQuery) ? statusQuery : [statusQuery];
       const allowedStatuses = [
         "Hadir",
         "Telat",
@@ -372,11 +427,11 @@ const getAttendanceRecapByAdmin = async (req, res) => {
         "Menunggu Approval",
       ];
 
-      if (!allowedStatuses.includes(status)) {
+      if (!statuses.every((status) => allowedStatuses.includes(status))) {
         return error(res, 400, "Status absensi tidak valid");
       }
 
-      attendanceFilter.status = status;
+      attendanceFilter.status = { $in: statuses };
     }
 
     // 4. Filter kelas dan siswa
@@ -511,5 +566,6 @@ module.exports = {
   approvedAttendanceLeaveByAdmin,
   rejectAttendanceLeaveByAdmin,
   markAbsentStudents,
+  getStudentsWithoutAttendanceToday,
   getAttendanceRecapByAdmin,
 };

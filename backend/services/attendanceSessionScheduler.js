@@ -53,36 +53,33 @@ const processAbsentStudents = async () => {
       // Lewati sesi yang belum berakhir
       if (now < endDateTime) continue;
 
-      // Ambil siswa yang sudah punya catatan absensi
-      const existingAttendances = await Attendance.find({
-        sessionId: session._id,
-      }).select("studentId");
-
-      const attendedStudentIds = new Set(
-        existingAttendances.map((attendance) =>
-          attendance.studentId.toString(),
-        ),
-      );
-
-      // Cari siswa yang belum punya catatan absensi
-      const students = await Student.find({
-        _id: { $nin: [...attendedStudentIds] },
-      }).select("_id");
+      // Cari siswa yang belum punya catatan absensi   
+      const students = await Student.find().select("_id");
 
       if (students.length === 0) continue;
 
-      // Buat status Alpha untuk siswa tersebut
-      await Attendance.insertMany(
-        students.map((student) => ({
-          studentId: student._id,
-          sessionId: session._id,
-          status: "Alpha",
-        })),
-        { ordered: false },
-      );
+      const operations = students.map((student) => ({
+        updateOne: {
+          filter: {
+            studentId: student._id,
+            sessionId: session._id,
+          },
+          update: {
+            $setOnInsert: {
+              studentId: student._id,
+              sessionId: session._id,
+              status: "Alpha",
+            },
+          },
+          upsert: true,
+        },
+      }));
 
+      const result = await Attendance.bulkWrite(operations);
+      
       console.log(
-        `Sesi ${session._id}: ${students.length} siswa diberi status Alpha.`,
+        `Sesi ${session._id}: ` +
+        `${result.upsertedCount} siswa baru diberi Alpha.`,
       );
     }
   } catch (err) {
@@ -94,7 +91,7 @@ const processAbsentStudents = async () => {
 const startAttendanceSessionScheduler = () => {
   // Membuat sesi setiap Senin-Jumat pukul 06:50 WIB
   cron.schedule(
-    "50 6 * * 1-5",
+    "* * * * *",
     async () => {
       console.log("Cron pembuatan sesi berjalan.");
       await createTodaySession();

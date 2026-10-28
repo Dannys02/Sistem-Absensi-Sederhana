@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { House, Building2, Users } from "lucide-react";
 
-function Sidebar({ mobileResponsive, setMobileResponsive }) {
+function Sidebar({ mobileResponsive }) {
   const location = useLocation();
   const { logout } = useAuth();
 
@@ -11,7 +11,7 @@ function Sidebar({ mobileResponsive, setMobileResponsive }) {
   return (
     <aside
       onClick={(e) => e.stopPropagation()}
-      className={`fixed w-64 min-h-screen bg-slate-900 text-white flex flex-col justify-between shrink-0 shadow-xl transform transition-transform duration-300 ease-in-out md:translate-x-0 ${mobileResponsive ? "translate-x-0" : "-translate-x-full"}`}
+      className={`fixed w-64 z-[999] min-h-screen bg-slate-900 text-white flex flex-col justify-between shrink-0 shadow-xl transform transition-transform duration-300 ease-in-out md:translate-x-0 ${mobileResponsive ? "translate-x-0" : "-translate-x-full"}`}
     >
       <div>
         <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-800">

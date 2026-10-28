@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import Sidebar from "../../components/Sidebar";
+import Navbar from "../../components/NavbarAdmin";
+import Sidebar from "../../components/SidebarAdmin";
 import {
   Building2,
   Users,
   CheckCircle2,
-  Menu,
-  User,
   FileText,
   Stethoscope,
 } from "lucide-react";
@@ -71,7 +70,9 @@ function Admin() {
             `/admin/attendance/recap?date=${tanggalHariIni}&status=Hadir&status=Telat`,
           ),
           api.get("/admin/attendance/leave"),
-          api.get(`/admin/attendance/recap?date=${tanggalHariIni}&status=Izin&status=Sakit`),
+          api.get(
+            `/admin/attendance/recap?date=${tanggalHariIni}&status=Izin&status=Sakit`,
+          ),
           api.get("/admin/student-without-attendance"),
         ]);
 
@@ -140,38 +141,8 @@ function Admin() {
         setMobileResponsive={setMobileResponsive}
       />
 
-      <div className="pl-0 lg:pl-64 flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-[#4F7942]/20 px-8 flex items-center justify-between shadow-xs">
-          <div>
-            <h1 className="hidden md:block text-lg font-bold text-[#4F7942]">
-              Admin Dashboard
-            </h1>
-
-            <button
-              className="block md:hidden"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSidebar();
-              }}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 ml-auto">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-800 leading-tight">
-                {user?.name || "Uknown"}
-              </p>
-              <p className="text-xs text-[#4F7942] font-medium capitalize">
-                {user?.role || "Uknown"}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#4F7942]/10 border border-[#4F7942]/30 text-[#4F7942] flex items-center justify-center shrink-0 shadow-xs">
-              <User className="w-5 h-5" />
-            </div>
-          </div>
-        </header>
+      <div className="pl-0 lg:pl-64 pt-14 flex-1 flex flex-col min-w-0">
+        <Navbar user={user} toggleSidebar={toggleSidebar} />
 
         <main className="p-8 space-y-8">
           <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -196,9 +167,16 @@ function Admin() {
                   <p className="text-sm font-medium text-gray-500">
                     {item.title}
                   </p>
-                  <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                    {item.value}
-                  </h3>
+                  {loading ? (
+                    <div className="py-2 flex items-center">
+                      <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <h3 className="text-3xl font-bold text-gray-800 mt-2">
+                      {item.value}
+                    </h3>
+                  )}
+
                   <p className="text-xs text-[#4F7942] font-medium mt-1">
                     {item.unit}
                   </p>
@@ -241,13 +219,16 @@ function Admin() {
                     <tr>
                       <td colSpan={4} className="py-6 text-center">
                         <div className="flex items-center justify-center">
-                          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-10 h-10 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       </td>
                     </tr>
                   ) : studentWithoutAttendance.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-500 font-medium">
+                      <td
+                        colSpan={4}
+                        className="py-8 text-center text-gray-500 font-medium"
+                      >
                         Tidak ada data siswa yang belum absen hari ini
                       </td>
                     </tr>

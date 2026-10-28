@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/NavbarAdmin";
-import Sidebar from "../../components/SidebarAdmin";
 import {
   Building2,
   Users,
@@ -21,8 +19,6 @@ function Admin() {
   const [permissionStudent, setPermissionStudent] = useState(0);
   const [studentLeave, setStudentLeave] = useState(0);
   const [studentWithoutAttendance, setStudentWithoutAttendance] = useState([]);
-
-  const [mobileResponsive, setMobileResponsive] = useState(false);
 
   // warna badge status absensi
   const getStatusBadge = (status) => {
@@ -126,25 +122,8 @@ function Admin() {
     },
   ];
 
-  const toggleSidebar = () => {
-    setMobileResponsive(!mobileResponsive);
-  };
-
-  const closer = () => {
-    setMobileResponsive(false);
-  };
-
   return (
-    <div onClick={closer} className="min-h-screen bg-gray-50 flex">
-      <Sidebar
-        mobileResponsive={mobileResponsive}
-        setMobileResponsive={setMobileResponsive}
-      />
-
-      <div className="pl-0 lg:pl-64 pt-14 flex-1 flex flex-col min-w-0">
-        <Navbar user={user} toggleSidebar={toggleSidebar} />
-
-        <main className="p-8 space-y-8">
+    <div className="space-y-8">
           <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-[#4F7942]">
@@ -168,7 +147,7 @@ function Admin() {
                     {item.title}
                   </p>
                   {loading ? (
-                    <div className="py-2 flex items-center">
+                    <div className="pt-3 flex items-center">
                       <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   ) : (
@@ -257,8 +236,6 @@ function Admin() {
               </table>
             </div>
           </div>
-        </main>
-      </div>
     </div>
   );
 }

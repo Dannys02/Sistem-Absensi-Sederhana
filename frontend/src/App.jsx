@@ -6,6 +6,8 @@ import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
 
 import Admin from "./pages/dashboard/Admin";
+import LayoutAdmin from "./layouts/LayoutAdmin";
+import ClassAdmin from "./pages/admin/ClassAdmin";
 import Student from "./pages/dashboard/Student";
 import { Routes, Route } from "react-router-dom";
 
@@ -31,13 +33,15 @@ function App() {
       />
 
       <Route
-        path="/dashboard/admin"
         element={
           <PrivateRoute role="admin">
-            <Admin />
+            <LayoutAdmin />
           </PrivateRoute>
         }
-      />
+      >
+        <Route path="/dashboard/admin" element={<Admin />} />
+        <Route path="/class/management" element={<ClassAdmin />} />
+      </Route>
 
       <Route
         path="/dashboard/siswa"

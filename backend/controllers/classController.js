@@ -68,7 +68,7 @@ const updateClass = async (req, res) => {
       return error(res, 404, "Kelas tidak ditemukan");
     }
 
-    success(res, 204, "Berhasil memperbarui kelas", updatedClass);
+    success(res, 200, "Berhasil memperbarui kelas", updatedClass);
   } catch (err) {
     return error(res, 500, err.message);
   }
@@ -87,7 +87,7 @@ const deleteClass = async (req, res) => {
       return error(res, 404, "Kelas tidak ditemukan");
     }
 
-    success(res, 204, "Berhasil menghapus kelas");
+    success(res, 200, "Berhasil menghapus kelas");
   } catch (error) {
     return error(res, 500, error.message);
   }

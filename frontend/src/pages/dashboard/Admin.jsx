@@ -68,7 +68,7 @@ function Admin() {
           api.get("/admin/all-class"),
           api.get("/admin/all-student"),
           api.get(
-            `/admin/attendance/recap?date=${tanggalHariIni}&status=Hadir`,
+            `/admin/attendance/recap?date=${tanggalHariIni}&status=Hadir&status=Telat`,
           ),
           api.get("/admin/attendance/leave"),
           api.get(`/admin/attendance/recap?date=${tanggalHariIni}&status=Izin&status=Sakit`),
@@ -243,6 +243,12 @@ function Admin() {
                         <div className="flex items-center justify-center">
                           <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                         </div>
+                      </td>
+                    </tr>
+                  ) : studentWithoutAttendance.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-gray-500 font-medium">
+                        Tidak ada data siswa yang belum absen hari ini
                       </td>
                     </tr>
                   ) : (

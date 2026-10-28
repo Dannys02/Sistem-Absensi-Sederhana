@@ -48,20 +48,11 @@ const checkIn = async (req, res) => {
 
     const sessionDate = getJakartaDateString(session.date);
 
-    const startDateTime = getJakartaDateTime(
-      sessionDate,
-      session.startTime,
-    );
+    const startDateTime = getJakartaDateTime(sessionDate, session.startTime);
 
-    const endDateTime = getJakartaDateTime(
-      sessionDate,
-      session.endTime,
-    );
+    const endDateTime = getJakartaDateTime(sessionDate, session.endTime);
 
-    const lateDateTime = getJakartaDateTime(
-      sessionDate,
-      session.lateThreshold,
-    );
+    const lateDateTime = getJakartaDateTime(sessionDate, session.lateThreshold);
 
     if (checkInTime < startDateTime) {
       return error(res, 400, "Absensi belum dibuka");
@@ -144,15 +135,9 @@ const submitLeaveRequest = async (req, res) => {
 
     const sessionDate = getJakartaDateString(session.date);
 
-    const startDateTime = getJakartaDateTime(
-      sessionDate,
-      session.startTime,
-    );
+    const startDateTime = getJakartaDateTime(sessionDate, session.startTime);
 
-    const endDateTime = getJakartaDateTime(
-      sessionDate,
-      session.endTime,
-    );
+    const endDateTime = getJakartaDateTime(sessionDate, session.endTime);
 
     if (now < startDateTime) {
       return error(res, 400, "Absensi belum dibuka");
@@ -268,7 +253,12 @@ const getStudentsWithoutAttendanceToday = async (req, res) => {
     });
 
     if (!session) {
-      return error(res, 404, "Sesi absensi hari ini belum tersedia");
+      return success(
+        res,
+        200,
+        "Berhasil mengambil siswa yang belum absen (Sesi belum dibuat)",
+        { totalData: 0, data: [] },
+      );
     }
 
     // ambil ID siswa yang sudah memiliki catatan absensi
@@ -277,7 +267,7 @@ const getStudentsWithoutAttendanceToday = async (req, res) => {
     }).select("studentId");
 
     const attendedStudentIds = attendances.map(
-      (attendance) => attendance.studentId
+      (attendance) => attendance.studentId,
     );
 
     // cari siswa yang belum memiliki catatan absensi
@@ -287,40 +277,23 @@ const getStudentsWithoutAttendanceToday = async (req, res) => {
       .populate("userId", "name email")
       .populate("classId", "name");
 
-    return success(
-      res,
-      200,
-      "Berhasil mengambil siswa yang belum absen",
-      {
-        totalData: students.length,
-        data: students,
-      }
-    );
+    return success(res, 200, "Berhasil mengambil siswa yang belum absen", {
+      totalData: students.length,
+      data: students,
+    });
   } catch (err) {
     return error(res, 500, err.message);
   }
 };
 
-
 const getAttendanceRecapByAdmin = async (req, res) => {
   try {
-    const {
-      startDate,
-      endDate,
-      status,
-      date,
-      classId,
-      studentId,
-    } = req.query;
+    const { startDate, endDate, status, date, classId, studentId } = req.query;
 
     // 1. Validasi pagination
-    const page = req.query.page === undefined
-      ? 1
-      : Number(req.query.page);
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
 
-    const limit = req.query.limit === undefined
-      ? 10
-      : Number(req.query.limit);
+    const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
 
     if (
       !Number.isInteger(page) ||
@@ -371,14 +344,10 @@ const getAttendanceRecapByAdmin = async (req, res) => {
       sessionFilter.date = {
         $gte: startOfDay,
         $lt: endOfDay,
-      }
+      };
     } else if (startDate || endDate) {
       if (!startDate || !endDate) {
-        return error(
-          res,
-          400,
-          "startDate dan endDate harus diisi bersamaan",
-        );
+        return error(res, 400, "startDate dan endDate harus diisi bersamaan");
       }
 
       if (!validDate(startDate) || !validDate(endDate)) {
@@ -386,11 +355,7 @@ const getAttendanceRecapByAdmin = async (req, res) => {
       }
 
       if (startDate > endDate) {
-        return error(
-          res,
-          400,
-          "startDate tidak boleh setelah endDate",
-        );
+        return error(res, 400, "startDate tidak boleh setelah endDate");
       }
 
       const { startOfDay } = getJakartaDayRange(startDate);
@@ -406,8 +371,8 @@ const getAttendanceRecapByAdmin = async (req, res) => {
     const attendanceFilter = {};
 
     if (Object.keys(sessionFilter).length > 0) {
-      const sessions = await AttendanceSession.find(sessionFilter)
-        .select("_id");
+      const sessions =
+        await AttendanceSession.find(sessionFilter).select("_id");
 
       attendanceFilter.sessionId = {
         $in: sessions.map((session) => session._id),
@@ -462,9 +427,7 @@ const getAttendanceRecapByAdmin = async (req, res) => {
     }
 
     // 5. Hitung total data sebelum pagination
-    const totalData = await Attendance.countDocuments(
-      attendanceFilter,
-    );
+    const totalData = await Attendance.countDocuments(attendanceFilter);
 
     const totalPages = Math.ceil(totalData / limit);
 
@@ -485,22 +448,17 @@ const getAttendanceRecapByAdmin = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    return success(
-      res,
-      200,
-      "Berhasil mengambil rekap absensi",
-      {
-        data: attendance,
-        pagination: {
-          page,
-          limit,
-          totalData,
-          totalPages,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1 && totalData > 0,
-        },
+    return success(res, 200, "Berhasil mengambil rekap absensi", {
+      data: attendance,
+      pagination: {
+        page,
+        limit,
+        totalData,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1 && totalData > 0,
       },
-    );
+    });
   } catch (err) {
     return error(res, 500, err.message);
   }
@@ -517,10 +475,7 @@ const markAbsentStudents = async (req, res) => {
     }
 
     const sessionDate = getJakartaDateString(session.date);
-    const endDateTime = getJakartaDateTime(
-      sessionDate,
-      session.endTime,
-    );
+    const endDateTime = getJakartaDateTime(sessionDate, session.endTime);
 
     if (new Date() < endDateTime) {
       return error(res, 400, "Sesi absensi belum berakhir");

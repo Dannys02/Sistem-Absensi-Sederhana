@@ -169,6 +169,14 @@ const submitLeaveRequest = async (req, res) => {
 const getSubmitLeaveRequestByAdmin = async (req, res) => {
   const attendance = await Attendance.find({
     status: "Menunggu Approval",
+  }).populate({
+    // ambil nama siswa (dari User) dan nama kelas untuk ditampilkan di halaman admin
+    path: "studentId",
+    select: "nis userId classId",
+    populate: [
+      { path: "userId", select: "name email" },
+      { path: "classId", select: "name" },
+    ],
   });
 
   success(

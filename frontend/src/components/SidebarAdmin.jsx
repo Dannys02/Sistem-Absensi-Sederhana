@@ -66,6 +66,18 @@ function Sidebar({ mobileResponsive }) {
               <Users className="w-5 h-5" />
               <span>Manajemen Siswa</span>
             </Link>
+
+            <Link
+              to="/student/leave"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-150 ${
+                isActive("/student/leave")
+                  ? "bg-[#4F7942] text-white shadow-sm"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              <ClipboardCheck className="w-5 h-5" />
+              <span>Izin / Sakit</span>
+            </Link>
           </nav>
         </div>
       </div>

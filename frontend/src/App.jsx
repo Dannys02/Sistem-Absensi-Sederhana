@@ -10,6 +10,7 @@ import Admin from "./pages/dashboard/Admin";
 import LayoutAdmin from "./layouts/LayoutAdmin";
 import ClassAdmin from "./pages/admin/ClassAdmin";
 import StudentAdmin from "./pages/admin/StudentAdmin";
+import StudentLeave from "./pages/admin/StudentLeave";
 import Student from "./pages/dashboard/Student";
 import { Routes, Route } from "react-router-dom";
 
@@ -55,6 +56,7 @@ function App() {
           <Route path="/dashboard/admin" element={<Admin />} />
           <Route path="/class/management" element={<ClassAdmin />} />
           <Route path="/student/management" element={<StudentAdmin />} />
+          <Route path="/student/leave" element={<StudentLeave />} />
         </Route>
 
         <Route

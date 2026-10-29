@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Pencil, Trash2, Plus, Save, X } from "lucide-react";
+import { Users, Pencil, Trash2, Plus, Save, X, Search } from "lucide-react";
 import api from "../../api/axios";
 
 const emptyForm = { name: "", email: "", password: "", classId: "", nis: "" };
@@ -11,6 +11,21 @@ function StudentAdmin() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState({});
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // efek debounce
+ useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (!error) return;
@@ -26,10 +41,11 @@ function StudentAdmin() {
     setLoading(true);
     try {
       const [resStudent, resClass] = await Promise.all([
-        api.get("/admin/all-student"),
+        api.get(`/admin/all-student?search=${debouncedSearch}&page=${page}&limit=10`),
         api.get("/admin/all-class"),
       ]);
-      setStudents(resStudent.data.data);
+      setStudents(resStudent.data.data.data.students);
+      setTotalPages(resStudent.data.data.pagination.totalPages);
       setClasses(resClass.data.data);
     } catch (err) {
       console.error("Gagal ambil data siswa:", err);
@@ -40,7 +56,7 @@ function StudentAdmin() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [debouncedSearch, page]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -300,9 +316,21 @@ function StudentAdmin() {
               Menampilkan seluruh data siswa yang terdaftar
             </p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#4F7942] text-white w-fit">
-            Total: {students.length} Siswa
-          </span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama, email, NIS, kelas..."
+                className="w-full sm:w-72 pl-9 pr-4 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+              />
+            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#4F7942] text-white w-fit">
+              Total: {students.length} Siswa
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -322,7 +350,7 @@ function StudentAdmin() {
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center">
+                  <td colSpan={6} className="py-6 text-center">
                     <div className="flex items-center justify-center">
                       <div className="w-10 h-10 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
                     </div>
@@ -331,10 +359,10 @@ function StudentAdmin() {
               ) : students.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="py-8 text-center text-gray-500 font-medium"
                   >
-                    Belum ada data siswa
+                    {search ? "Siswa tidak ditemukan" : "Belum ada data siswa"}
                   </td>
                 </tr>
               ) : (

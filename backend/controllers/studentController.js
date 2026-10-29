@@ -7,11 +7,45 @@ const mongoose = require("mongoose");
 // CRUD Akun Siswa/i hanya admin
 const getAllStudentAccount = async (req, res) => {
   try {
-    const students = await Student.find()
-      .populate("userId", "name email")
-      .populate("classId", "name");
+    const { search = "", page = 1, limit = 10 } = req.query;
 
-    success(res, 200, "Berhasil mengambil semua siswa dan user", students);
+    let filter = {};
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+
+      const users = await User.find({
+        name: { $regex: search, $options: "i" },
+        email: { $regex: search, $options: "i" },
+        role: "siswa",
+      }).select("_id");
+
+      const userIds = users.map((u) => u._id);
+
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
+      };
+    }
+
+    const totalData = await Student.countDocuments(filter);
+
+    const students = await Student.find(filter)
+      .populate("userId", "name email")
+      .populate("classId", "name")
+      .skip((page - 1) * parseInt(limit))
+      .limit(parseInt(limit));
+
+    success(res, 200, "Berhasil mengambil semua siswa dan user", {
+      data: { students },
+      pagination: {
+        totalData,
+        currentPage: parseInt(page),
+        totalPage: Math.ceil(totalData / limit),
+        limit: parseInt(limit),
+      },
+    });
   } catch (err) {
     return error(res, 500, err.message);
   }
@@ -26,7 +60,7 @@ const createStudentAccount = async (req, res, next) => {
       User.findOne({ email }),
       Student.findOne({ nis }),
     ]);
-    
+
     if (!cariClass) {
       return error(res, 404, "Kelas tidak ditemukan");
     }

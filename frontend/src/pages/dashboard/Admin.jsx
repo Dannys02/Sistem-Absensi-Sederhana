@@ -73,7 +73,7 @@ function Admin() {
         ]);
 
         setGrade(resClass.data.data.length);
-        setStudent(resStudent.data.data.length);
+        setStudent(resStudent.data.data.data.students.length);
         setAttendanceToday(resAttendance.data.data.pagination.totalData);
         setPermissionStudent(resPermissionStudent.data.data.length);
         setStudentLeave(resStudentLeave.data.data.pagination.totalData);

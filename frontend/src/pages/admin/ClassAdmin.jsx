@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Pencil, Trash2, Plus, Save, X } from "lucide-react";
+import { Building2, Pencil, Trash2, Plus, Save, X, Search } from "lucide-react";
 import api from "../../api/axios";
 
 function ClassAdmin() {
@@ -8,6 +8,11 @@ function ClassAdmin() {
   const [form, setForm] = useState({ name: "" });
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  const filteredClasses = classes.filter((c) =>
+    c.name?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   useEffect(() => {
     if (!error) return;
@@ -156,9 +161,21 @@ function ClassAdmin() {
               Menampilkan seluruh data kelas yang terdaftar
             </p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#4F7942] text-white w-fit">
-            Total: {classes.length} Kelas
-          </span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama kelas..."
+                className="w-full sm:w-64 pl-9 pr-4 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+              />
+            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#4F7942] text-white w-fit">
+              Total: {filteredClasses.length} Kelas
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -181,17 +198,17 @@ function ClassAdmin() {
                     </div>
                   </td>
                 </tr>
-              ) : classes.length === 0 ? (
+              ) : filteredClasses.length === 0 ? (
                 <tr>
                   <td
                     colSpan={3}
                     className="py-8 text-center text-gray-500 font-medium"
                   >
-                    Belum ada data kelas
+                    {search ? "Kelas tidak ditemukan" : "Belum ada data kelas"}
                   </td>
                 </tr>
               ) : (
-                classes.map((item, idx) => (
+                filteredClasses.map((item, idx) => (
                   <tr
                     key={item._id}
                     className="hover:bg-gray-50/80 transition duration-100"

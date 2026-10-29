@@ -79,7 +79,7 @@ const processAbsentStudents = async () => {
       
       console.log(
         `Sesi ${session._id}: ` +
-        `${result.upsertedCount} siswa baru diberi Alpha.`,
+        `${result.upsertedCount} siswa diberi Alpha.`,
       );
     }
   } catch (err) {

@@ -169,7 +169,7 @@ function Register() {
               required
               value={form.classId || ""}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition appearance-none"
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
             >
               <option value="" disabled>
                 -- Pilih Kelas --

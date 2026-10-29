@@ -7,14 +7,11 @@ const mongoose = require("mongoose");
 // CRUD Akun Siswa/i hanya admin
 const getAllStudentAccount = async (req, res) => {
   try {
-    const [users, students] = await Promise.all([
-      User.find({ role: "siswa" }),
-      Student.find(),
-    ]);
+    const students = await Student.find()
+      .populate("userId", "name email")
+      .populate("classId", "name");
 
-    const data = { users, students };
-
-    success(res, 200, "Berhasil mengambil semua siswa dan user", data);
+    success(res, 200, "Berhasil mengambil semua siswa dan user", students);
   } catch (err) {
     return error(res, 500, err.message);
   }
@@ -29,7 +26,7 @@ const createStudentAccount = async (req, res, next) => {
       User.findOne({ email }),
       Student.findOne({ nis }),
     ]);
-
+    
     if (!cariClass) {
       return error(res, 404, "Kelas tidak ditemukan");
     }

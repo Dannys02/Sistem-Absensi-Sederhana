@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { House, Building2, Users } from "lucide-react";
+import { House, Building2, Users, ClipboardCheck } from "lucide-react";
 
 function Sidebar({ mobileResponsive }) {
   const location = useLocation();
@@ -15,21 +15,8 @@ function Sidebar({ mobileResponsive }) {
     >
       <div>
         <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-800">
-          <div className="w-9 h-9 rounded-xl bg-[#4F7942] flex items-center justify-center text-white shadow-sm">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
+          <div className="w-9 h-9 rounded-full bg-[#4F7942] flex items-center justify-center text-white shadow-sm">
+            <ClipboardCheck className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-wide text-white">

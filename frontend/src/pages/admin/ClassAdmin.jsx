@@ -63,9 +63,6 @@ function ClassAdmin() {
           "Gagal menyimpan kelas, silakan coba lagi.",
       );
     }
-
-    setForm({ name: "" });
-    setEditId(null);
     fetchClasses();
   };
 
@@ -120,7 +117,7 @@ function ClassAdmin() {
               value={form.name}
               onChange={handleChange}
               placeholder="Contoh: XII RPL 1"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
             />
           </div>
           <div className="flex gap-2">

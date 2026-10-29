@@ -63,22 +63,60 @@ const updateStudent = Joi.object({
   }),
 });
 
+
 const validateCreateStudent = (req, res, next) => {
-  const { error, value } = createStudent.validate(req.body);
+  const { error, value } = createStudent.validate(req.body, {
+    abortEarly: false,
+  });
+
   if (error) {
-    return res.status(400).json({ success: false, message: error.details[0].message });
+    const errors = {};
+
+    error.details.forEach((detail) => {
+      const field = detail.path[0];
+
+      if (!errors[field]) {
+        errors[field] = detail.message;
+      }
+    });
+
+    return res.status(400).json({
+      success: false,
+      message: "Validasi gagal",
+      errors,
+    });
   }
+
   req.body = value;
   next();
 };
 
 const validateUpdateStudent = (req, res, next) => {
-  const { error, value } = updateStudent.validate(req.body);
+  const { error, value } = updateStudent.validate(req.body, {
+    abortEarly: false,
+  });
+
   if (error) {
-    return res.status(400).json({ success: false, message: error.details[0].message });
+    const errors = {};
+
+    error.details.forEach((detail) => {
+      const field = detail.path[0];
+
+      if (!errors[field]) {
+        errors[field] = detail.message;
+      }
+    });
+
+    return res.status(400).json({
+      success: false,
+      message: "Validasi gagal",
+      errors,
+    });
   }
+
   req.body = value;
   next();
 };
+
 
 module.exports = { validateCreateStudent, validateUpdateStudent };

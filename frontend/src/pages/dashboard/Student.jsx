@@ -1,14 +1,423 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import api from "../../api/axios";
+import {
+  CheckCircle2,
+  FileText,
+  Stethoscope,
+  XCircle,
+  Clock,
+  LogOut,
+  Send,
+  X,
+} from "lucide-react";
 
 function Student() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+
+  const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState(new Date());
+  const [attendedAt, setAttendedAt] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ requestType: "", reason: "" });
+  const [leaveType, setLeaveType] = useState("Izin");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError("");
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (showModal) {
+      document.body.classList.add("overflow-hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+    }
+    return () => {
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, [showModal]);
+
+  const fetchSession = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/siswa/attendance/me");
+      const dataResponse = response.data.data.map((item) => {
+        const dateObj = new Date(item.createdAt);
+
+        // mengambil Tanggal (Format: YYYY-MM-DD)
+        const tahun = dateObj.getFullYear();
+        const bulan = String(dateObj.getMonth() + 1).padStart(2, "0"); // Bulan dimulai dari 0
+        const tanggal = String(dateObj.getDate()).padStart(2, "0");
+        const tanggalLokal = `${tahun}-${bulan}-${tanggal}`;
+
+        // mengambil Jam (Format: HH:MM:SS)
+        const jam = String(dateObj.getHours()).padStart(2, "0");
+        const menit = String(dateObj.getMinutes()).padStart(2, "0");
+        const detik = String(dateObj.getSeconds()).padStart(2, "0");
+        const jamLokal = `${jam}:${menit}:${detik}`;
+
+        return {
+          ...item,
+          tanggalLokal: tanggalLokal,
+          jam: jamLokal,
+        };
+      });
+
+      setHistory(dataResponse);
+    } catch (err) {
+      console.error("Gagal ambil data absensi:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSession();
+  }, []);
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "Hadir":
+        return "text-[#4F7942]";
+      case "Terlambat":
+        return "text-amber-700";
+      case "Izin":
+        return "text-yellow-700";
+      case "Sakit":
+        return "text-blue-700";
+      case "Alpha":
+        return "text-red-700";
+      default:
+        return "text-gray-700";
+    }
+  };
+
+  const formatTime = (d) =>
+    d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  const count = (status) => history.filter((h) => h.status === status).length;
+
+  const stats = [
+    {
+      title: "Hadir",
+      value: count("Hadir") + count("Terlambat"),
+      unit: "Hari bulan ini",
+      icon: <CheckCircle2 size={24} />,
+    },
+    {
+      title: "Izin",
+      value: count("Izin"),
+      unit: "Hari bulan ini",
+      icon: <FileText size={24} />,
+    },
+    {
+      title: "Sakit",
+      value: count("Sakit"),
+      unit: "Hari bulan ini",
+      icon: <Stethoscope size={24} />,
+    },
+    {
+      title: "Alpha",
+      value: count("Alpha"),
+      unit: "Hari bulan ini",
+      icon: <XCircle size={24} />,
+    },
+  ];
+
+  const handleAttendance = () => {
+    // TODO: ganti dengan api.post(...)
+    const time = new Date();
+    setAttendedAt(time);
+    setHistory((prev) => [
+      {
+        id: Date.now(),
+        date: time.toISOString().slice(0, 10),
+        time: formatTime(time),
+        status: "Hadir",
+        note: "-",
+      },
+      ...prev,
+    ]);
+  };
+
+  const handleSubmitLeave = async (e) => {
+    e.preventDefault();
+
+    try {
+      await api.post("/siswa/attendance/leave", form);
+      setLeaveType("Izin");
+      setShowModal(false);
+      setReason("");
+    } catch (err) {
+      const responseData = err.response?.data;
+      if (responseData?.errors) {
+        setError(responseData?.errors);
+      } else if (responseData?.message) {
+        setError(responseData.message);
+      } else {
+        setError("Terjadi kesalahan pada server.");
+        console.log(err);
+      }
+    }
+  };
+
   return (
-    <>
-      <h1>Halo Siswa</h1>
-      <button className="bg-red-600 text-white p-2 rounded-md" onClick={logout}>
-        Logout
-      </button>
-    </>
+    <div
+      className="min-h-screen bg-gray-50"
+    >
+      <nav className="bg-white border-b border-[#4F7942]/20 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-[#4F7942]">AbsensiKu</h1>
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition"
+        >
+          <LogOut size={18} /> Logout
+        </button>
+      </nav>
+
+      <main className="max-w-7xl mx-auto p-6 space-y-8">
+        <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-[#4F7942]">
+              Selamat Datang, {user?.name || "Unknown"}!
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Berikut adalah ringkasan kehadiran kamu pada sistem AbsensiKu.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#4F7942] text-[#4F7942] text-sm font-semibold hover:bg-[#4F7942]/10 transition w-fit"
+          >
+            <FileText size={18} /> Ajukan Izin/Sakit
+          </button>
+        </div>
+
+        <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
+              <Clock size={28} />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">{formatDate(now)}</p>
+              <h3 className="text-3xl font-bold text-gray-800">
+                {now.toLocaleTimeString("id-ID")}
+              </h3>
+              <p
+                className={`text-sm font-medium mt-1 ${
+                  attendedAt ? "text-[#4F7942]" : "text-amber-600"
+                }`}
+              >
+                {attendedAt
+                  ? `Sudah absen pukul ${formatTime(attendedAt)}`
+                  : "Kamu belum absen hari ini"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleAttendance}
+            disabled={!!attendedAt}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            <CheckCircle2 size={20} />
+            {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((item, index) => (
+            <div
+              key={index}
+              className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm hover:shadow-md transition duration-150 flex items-start justify-between"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  {item.title}
+                </p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-2">
+                  {item.value}
+                </h3>
+                <p className="text-xs text-[#4F7942] font-medium mt-1">
+                  {item.unit}
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
+                {item.icon}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white border border-[#4F7942]/20 rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="text-lg font-bold text-[#4F7942]">
+                Riwayat Absensi Saya
+              </h3>
+              <p className="text-sm text-gray-500">
+                Menampilkan {history.length} catatan absensi terakhir
+              </p>
+            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#4F7942] text-white w-fit">
+              Total: {history.length} Data
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#4F7942]/5 text-gray-700 text-xs uppercase tracking-wider border-b border-[#4F7942]/10">
+                  <th className="py-3.5 px-6 font-semibold">No</th>
+                  <th className="py-3.5 px-6 font-semibold">Tanggal</th>
+                  <th className="py-3.5 px-6 font-semibold">Jam</th>
+                  <th className="py-3.5 px-6 font-semibold">Status</th>
+                  <th className="py-3.5 px-6 font-semibold">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center">
+                      <div className="flex items-center justify-center">
+                        <div className="w-10 h-10 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : history.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-8 text-center text-gray-500 font-medium"
+                    >
+                      Belum ada data absensi
+                    </td>
+                  </tr>
+                ) : (
+                  history.map((item, idx) => (
+                    <tr
+                      key={item._id}
+                      className="hover:bg-gray-50/80 transition duration-100"
+                    >
+                      <td className="py-4 px-6 font-medium text-gray-500">
+                        {idx + 1}
+                      </td>
+                      <td className="py-4 px-6 font-semibold text-gray-800">
+                        {formatDate(item.tanggalLokal)}
+                      </td>
+                      <td className="py-4 px-6 text-gray-600">{item.jam}</td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium ${getStatusBadge(
+                            item.status,
+                          )}`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-gray-600">
+                        {item.reason || "Tidak ada"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <form
+            onSubmit={handleSubmitLeave}
+            className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 space-y-5"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#4F7942]">
+                Ajukan Izin/Sakit
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Jenis</label>
+              <select
+                id="requestType"
+                name="requestType"
+                value={leaveType}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+              >
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">
+                Alasan
+              </label>
+              <textarea
+                id="reason"
+                name="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={4}
+                placeholder="Tuliskan alasan kamu..."
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+              />
+            </div>
+
+            <span className="text-red-600 text-xs font-semibold">{error}</span>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F7942] text-white text-sm font-semibold hover:bg-[#3e6034] transition"
+              >
+                <Send size={16} /> Kirim
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -28,9 +28,9 @@ const createTodaySession = async () => {
 
     const session = await AttendanceSession.create({
       date: startOfDay,
-      startTime: "06:00",
-      lateThreshold: "06:45",
-      endTime: "07:30",
+      startTime: "08:00",
+      lateThreshold: "08:30",
+      endTime: "08:45",
     });
 
     console.log(`Sesi ${dateString} berhasil dibuat. ID: ${session._id}`);

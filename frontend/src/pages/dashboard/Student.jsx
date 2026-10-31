@@ -21,9 +21,22 @@ function Student() {
   const [history, setHistory] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ requestType: "", reason: "" });
-  const [leaveType, setLeaveType] = useState("Izin");
-  const [reason, setReason] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [error, setError] = useState("");
+  const [errorAttendance, setErrorAttendance] = useState("");
+
+  useEffect(() => {
+    if (!showSuccess && !showError) return;
+
+    const timer = setTimeout(() => {
+      setShowSuccess(false);
+      setShowError(false);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [showSuccess, showError]);
 
   useEffect(() => {
     if (!error) return;
@@ -76,6 +89,30 @@ function Student() {
       });
 
       setHistory(dataResponse);
+
+      // Ambil tanggal hari ini berdasarkan WIB
+      const today = new Date().toLocaleDateString("en-CA", {
+        timeZone: "Asia/Jakarta",
+      });
+
+      // Cari absensi hari ini yang benar-benar check-in
+      const attendanceToday = dataResponse.find((item) => {
+        const attendanceDate = new Date(item.createdAt).toLocaleDateString(
+          "en-CA",
+          {
+            timeZone: "Asia/Jakarta",
+          },
+        );
+
+        return (
+          attendanceDate === today &&
+          ["Hadir", "Telat", "Alpha", "Izin", "Sakit", "Menunggu Approval"].includes(item.status)
+        );
+      });
+
+      setAttendedAt(
+        attendanceToday ? new Date(attendanceToday.createdAt) : null,
+      );
     } catch (err) {
       console.error("Gagal ambil data absensi:", err);
     } finally {
@@ -123,7 +160,7 @@ function Student() {
   const stats = [
     {
       title: "Hadir",
-      value: count("Hadir") + count("Terlambat"),
+      value: count("Hadir") + count("Telat"),
       unit: "Hari bulan ini",
       icon: <CheckCircle2 size={24} />,
     },
@@ -147,30 +184,44 @@ function Student() {
     },
   ];
 
-  const handleAttendance = () => {
-    // TODO: ganti dengan api.post(...)
-    const time = new Date();
-    setAttendedAt(time);
-    setHistory((prev) => [
-      {
-        id: Date.now(),
-        date: time.toISOString().slice(0, 10),
-        time: formatTime(time),
-        status: "Hadir",
-        note: "-",
-      },
-      ...prev,
-    ]);
+  const handleAttendance = async () => {
+    setLoading(true);
+
+    try {
+      const response = await api.post("siswa/attendance/check-in");
+      setSuccess(response.data.message);
+      setShowSuccess(true);
+
+      fetchSession();
+    } catch (err) {
+      const responseData = err.response?.data;
+      if (responseData?.errors) {
+        setErrorAttendance(responseData?.errors);
+      } else if (responseData?.message) {
+        setErrorAttendance(responseData.message);
+      } else {
+        setErrorAttendance("Gagal melakukan absensi. Silakan coba lagi.");
+        console.error("Error check-in:", err);
+      }
+      setShowError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // api kirim pengajuan izin/sakit
   const handleSubmitLeave = async (e) => {
     e.preventDefault();
 
     try {
-      await api.post("/siswa/attendance/leave", form);
-      setLeaveType("Izin");
+      const response = await api.post("/siswa/attendance/leave", form);
+      setSuccess(response.data.message);
+
+      setForm({ requestType: "", reason: "" });
       setShowModal(false);
-      setReason("");
+      setShowSuccess(true);
+
+      fetchSession();
     } catch (err) {
       const responseData = err.response?.data;
       if (responseData?.errors) {
@@ -185,9 +236,7 @@ function Student() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-gray-50"
-    >
+    <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-[#4F7942]/20 px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-[#4F7942]">AbsensiKu</h1>
         <button
@@ -217,34 +266,42 @@ function Student() {
         </div>
 
         <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
-              <Clock size={28} />
+          {loading ? (
+            <div className="flex items-center">
+              <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">{formatDate(now)}</p>
-              <h3 className="text-3xl font-bold text-gray-800">
-                {now.toLocaleTimeString("id-ID")}
-              </h3>
-              <p
-                className={`text-sm font-medium mt-1 ${
-                  attendedAt ? "text-[#4F7942]" : "text-amber-600"
-                }`}
+          ) : (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
+                  <Clock size={28} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">{formatDate(now)}</p>
+                  <h3 className="text-3xl font-bold text-gray-800">
+                    {now.toLocaleTimeString("id-ID")}
+                  </h3>
+                  <p
+                    className={`text-sm font-medium mt-1 ${
+                      attendedAt ? "text-[#4F7942]" : "text-amber-600"
+                    }`}
+                  >
+                    {attendedAt
+                      ? `Sudah absen pukul ${formatTime(attendedAt)}`
+                      : "Kamu belum absen hari ini"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAttendance}
+                disabled={!!attendedAt}
+                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed ${attendedAt ? "bg-gray-200" : ""}`}
               >
-                {attendedAt
-                  ? `Sudah absen pukul ${formatTime(attendedAt)}`
-                  : "Kamu belum absen hari ini"}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleAttendance}
-            disabled={!!attendedAt}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            <CheckCircle2 size={20} />
-            {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
-          </button>
+                <CheckCircle2 size={20} />
+                {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -257,9 +314,15 @@ function Student() {
                 <p className="text-sm font-medium text-gray-500">
                   {item.title}
                 </p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                  {item.value}
-                </h3>
+                {loading ? (
+                  <div className="pt-3 flex items-center">
+                    <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : (
+                  <h3 className="text-3xl font-bold text-gray-800 mt-2">
+                    {item.value}
+                  </h3>
+                )}
                 <p className="text-xs text-[#4F7942] font-medium mt-1">
                   {item.unit}
                 </p>
@@ -349,6 +412,48 @@ function Student() {
         </div>
       </main>
 
+      <div
+        className={`fixed left-1/2 -translate-x-1/2 z-50 flex items-start gap-3 bg-white border border-slate-100 shadow-xl rounded-xl p-4 min-w-[320px] max-w-[400px] transition-all duration-500 ease-out
+    ${showSuccess ? "top-8 opacity-100 scale-100" : "-top-20 opacity-0 scale-95"}`}
+      >
+        {/* Aksen Garis Hijau di Sisi Kiri */}
+        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-xl" />
+
+        {/* Ikon Sukses dari Lucide React */}
+        <div className="text-emerald-500 mt-0.5 ml-1 flex-shrink-0">
+          <CheckCircle2 className="w-5 h-5" strokeWidth={2.5} />
+        </div>
+
+        {/* Teks Notifikasi */}
+        <div className="flex-1 pr-2">
+          <p className="text-sm font-semibold text-slate-900">Berhasil!</p>
+          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+            {success}
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`fixed left-1/2 -translate-x-1/2 z-50 flex items-start gap-3 bg-white border border-slate-100 shadow-xl rounded-xl p-4 min-w-[320px] max-w-[400px] transition-all duration-500 ease-out
+    ${showError ? "top-8 opacity-100 scale-100" : "-top-20 opacity-0 scale-95"}`}
+      >
+        {/* Aksen Garis Merah di Sisi Kiri */}
+        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500 rounded-l-xl" />
+
+        {/* Ikon Sukses dari Lucide React */}
+        <div className="text-red-500 mt-0.5 ml-1 flex-shrink-0">
+          <CheckCircle2 className="w-5 h-5" strokeWidth={2.5} />
+        </div>
+
+        {/* Teks Notifikasi */}
+        <div className="flex-1 pr-2">
+          <p className="text-sm font-semibold text-slate-900">Gagal!</p>
+          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+            {errorAttendance}
+          </p>
+        </div>
+      </div>
+
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <form
@@ -373,10 +478,13 @@ function Student() {
               <select
                 id="requestType"
                 name="requestType"
-                value={leaveType}
+                value={form.requestType}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
               >
+                <option value="" disabled>
+                  -- Pilih Jenis --
+                </option>
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
               </select>
@@ -389,8 +497,8 @@ function Student() {
               <textarea
                 id="reason"
                 name="reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                value={form.reason}
+                onChange={handleChange}
                 rows={4}
                 placeholder="Tuliskan alasan kamu..."
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"

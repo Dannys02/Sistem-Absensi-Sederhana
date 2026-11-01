@@ -118,8 +118,11 @@ function StudentLeave() {
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="search"
+                name="search"
                 type="text"
                 value={search}
+                autoComplete="off"
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari nama, NIS, kelas..."
                 className="w-full sm:w-64 pl-9 pr-4 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"

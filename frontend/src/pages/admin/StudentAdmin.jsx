@@ -184,6 +184,7 @@ function StudentAdmin() {
                 name="name"
                 type="text"
                 value={form.name}
+                autoComplete="name" 
                 onChange={handleChange}
                 placeholder="Dannys Martha"
                 className={inputClass}
@@ -206,6 +207,7 @@ function StudentAdmin() {
                 name="email"
                 type="email"
                 value={form.email}
+                autoComplete="email" 
                 onChange={handleChange}
                 placeholder="anda@gmail.com"
                 className={inputClass}
@@ -228,6 +230,7 @@ function StudentAdmin() {
                 name="password"
                 type="password"
                 value={form.password ?? ""}
+                autoComplete="new-password"
                 onChange={handleChange}
                 placeholder="password"
                 className={inputClass}
@@ -250,6 +253,7 @@ function StudentAdmin() {
                 name="nis"
                 type="text"
                 value={form.nis}
+                autoComplete="off"
                 onChange={handleChange}
                 placeholder="Contoh: 12345"
                 className={inputClass}
@@ -327,8 +331,11 @@ function StudentAdmin() {
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="search"
+                name="search"
                 type="search"
                 value={search}
+                autoComplete="off"
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari nama, email, NIS, kelas..."
                 className="w-full sm:w-72 pl-9 pr-4 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"

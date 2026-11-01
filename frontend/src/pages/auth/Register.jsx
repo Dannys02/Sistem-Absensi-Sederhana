@@ -120,7 +120,7 @@ function Register() {
         <form onSubmit={submit} className="space-y-5">
           <div>
             <label
-              htmlFor="nama"
+              htmlFor="name"
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
               Nama Lengkap
@@ -131,6 +131,7 @@ function Register() {
               type="text"
               required
               value={form.name}
+              autoComplete="name"
               onChange={handleChange}
               placeholder="Masukkan nama lengkap"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
@@ -150,6 +151,7 @@ function Register() {
               type="email"
               required
               value={form.email}
+              autoComplete="email"
               onChange={handleChange}
               placeholder="nama@email.com"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
@@ -196,6 +198,7 @@ function Register() {
               type="password"
               required
               value={form.password}
+              autoComplete="new-password"
               onChange={handleChange}
               placeholder="Masukkan password"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"
@@ -214,6 +217,7 @@ function Register() {
               type="nis"
               required
               value={form.nis}
+              autoComplete="off"
               onChange={handleChange}
               placeholder="Masukkan nis"
               className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F7942] focus:border-[#4F7942] transition"

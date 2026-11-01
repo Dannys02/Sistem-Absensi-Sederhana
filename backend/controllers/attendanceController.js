@@ -1,4 +1,5 @@
 const Attendance = require("../models/Attendance");
+const User = require("../models/User");
 const Student = require("../models/Student");
 const AttendanceSession = require("../models/AttendanceSession");
 const {
@@ -249,7 +250,28 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
 
 const getStudentsWithoutAttendanceToday = async (req, res) => {
   try {
-    // ambil rentang tanggal hari ini berdasarkan WIB
+    const { search = "", page = 1, limit = 10 } = req.query;
+
+    let filter = {};
+    if (search) {
+      const users = await User.find({
+        role: "siswa",
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+
+      const userIds = users.map((u) => u._id);
+
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
+      };
+    }
+
     const { startOfDay, endOfDay } = getJakartaDayRange();
 
     // cari sesi absensi hari ini
@@ -260,34 +282,44 @@ const getStudentsWithoutAttendanceToday = async (req, res) => {
       },
     });
 
-    if (!session) {
-      return success(
-        res,
-        200,
-        "Berhasil mengambil siswa yang belum absen (Sesi belum dibuat)",
-        { totalData: 0, data: [] },
+    // Jika sesi belum dibuat, berarti BELUM ADA siswa yang absen.
+    // Maka semua siswa (sesuai filter search) dianggap belum absen.
+    let attendedStudentIds = [];
+
+    if (session) {
+      // ambil ID siswa yang SUDAH memiliki catatan absensi jika sesi ada
+      const attendances = await Attendance.find({
+        sessionId: session._id,
+      }).select("studentId");
+
+      attendedStudentIds = attendances.map(
+        (attendance) => attendance.studentId,
       );
     }
 
-    // ambil ID siswa yang sudah memiliki catatan absensi
-    const attendances = await Attendance.find({
-      sessionId: session._id,
-    }).select("studentId");
+    // tambahkan kondisi LOGIKA UTAMA: Mengecualikan siswa yang sudah absen (_id NOT IN attendedStudentIds)
+    if (attendedStudentIds.length > 0) {
+      filter._id = { $nin: attendedStudentIds };
+    }
 
-    const attendedStudentIds = attendances.map(
-      (attendance) => attendance.studentId,
-    );
+    // hitung total data SETELAH filter digabungkan agar pagination akurat
+    const totalData = await Student.countDocuments(filter);
 
-    // cari siswa yang belum memiliki catatan absensi
-    const students = await Student.find({
-      _id: { $nin: attendedStudentIds },
-    })
+    // 6. Cari siswa yang belum memiliki catatan absensi menggunakan filter terbaru
+    const students = await Student.find(filter)
       .populate("userId", "name email")
-      .populate("classId", "name");
+      .populate("classId", "name")
+      .skip((page - 1) * parseInt(limit))
+      .limit(parseInt(limit));
 
     return success(res, 200, "Berhasil mengambil siswa yang belum absen", {
-      totalData: students.length,
-      data: students,
+      data: { students },
+      pagination: {
+        totalData,
+        currentPage: parseInt(page),
+        totalPage: Math.ceil(totalData / limit),
+        limit: parseInt(limit),
+      },
     });
   } catch (err) {
     return error(res, 500, err.message);

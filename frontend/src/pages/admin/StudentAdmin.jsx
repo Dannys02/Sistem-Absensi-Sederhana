@@ -15,10 +15,10 @@ function StudentAdmin() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
 
   // efek debounce
- useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
@@ -41,11 +41,13 @@ function StudentAdmin() {
     setLoading(true);
     try {
       const [resStudent, resClass] = await Promise.all([
-        api.get(`/admin/all-student?search=${debouncedSearch}&page=${page}&limit=10`),
+        api.get(
+          `/admin/all-student?search=${debouncedSearch}&page=${page}&limit=10`,
+        ),
         api.get("/admin/all-class"),
       ]);
       setStudents(resStudent.data.data.data.students);
-      setTotalPages(resStudent.data.data.pagination.totalPages);
+      setTotalPage(resStudent.data.data.pagination.totalPage);
       setClasses(resClass.data.data);
     } catch (err) {
       console.error("Gagal ambil data siswa:", err);
@@ -118,6 +120,11 @@ function StudentAdmin() {
   };
 
   const handleEdit = (item) => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+
     setEditId(item.userId?._id);
     setForm({
       name: item.userId?.name || "",
@@ -409,6 +416,32 @@ function StudentAdmin() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-gray-100">
+          <p className="text-sm text-gray-500">
+            Halaman <span className="font-semibold text-gray-800">{page}</span>{" "}
+            dari{" "}
+            <span className="font-semibold text-gray-800">{totalPage}</span>
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((prev) => prev - 1)}
+              disabled={page === 1 || loading}
+              className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+
+            <button
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={page >= totalPage || loading}
+              className="px-4 py-2 text-sm font-medium bg-[#4F7942] text-white rounded-lg hover:bg-[#3f6235] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>

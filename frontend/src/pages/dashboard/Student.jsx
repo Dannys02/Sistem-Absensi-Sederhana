@@ -106,7 +106,14 @@ function Student() {
 
         return (
           attendanceDate === today &&
-          ["Hadir", "Telat", "Alpha", "Izin", "Sakit", "Menunggu Approval"].includes(item.status)
+          [
+            "Hadir",
+            "Telat",
+            "Alpha",
+            "Izin",
+            "Sakit",
+            "Menunggu Approval",
+          ].includes(item.status)
         );
       });
 
@@ -257,50 +264,55 @@ function Student() {
               Berikut adalah ringkasan kehadiran kamu pada sistem AbsensiKu.
             </p>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#4F7942] text-[#4F7942] text-sm font-semibold hover:bg-[#4F7942]/10 transition w-fit"
-          >
-            <FileText size={18} /> Ajukan Izin/Sakit
-          </button>
-        </div>
-
-        <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           {loading ? (
             <div className="flex items-center">
               <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            <>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
-                  <Clock size={28} />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">{formatDate(now)}</p>
-                  <h3 className="text-3xl font-bold text-gray-800">
-                    {now.toLocaleTimeString("id-ID")}
-                  </h3>
-                  <p
-                    className={`text-sm font-medium mt-1 ${
-                      attendedAt ? "text-[#4F7942]" : "text-amber-600"
-                    }`}
-                  >
-                    {attendedAt
-                      ? `Sudah absen pukul ${formatTime(attendedAt)}`
-                      : "Kamu belum absen hari ini"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleAttendance}
-                disabled={!!attendedAt}
-                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed ${attendedAt ? "bg-gray-200" : ""}`}
+            <button
+              onClick={() => setShowModal(true)}
+              disabled={!!attendedAt}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#4F7942] text-[#4F7942] text-sm font-semibold transition w-fit disabled:cursor-not-allowed ${attendedAt ? "bg-gray-300 text-white border-gray-200" : "hover:bg-[#4F7942]/10"}`}
+            >
+              <FileText size={18} /> {attendedAt ? "Sudah Absen" : "Ajukan Izin/Sakit"}
+            </button>
+          )}
+        </div>
+
+        <div className="bg-white border border-[#4F7942]/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-[#4F7942]/10 text-[#4F7942] flex items-center justify-center shrink-0">
+              <Clock size={28} />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">{formatDate(now)}</p>
+              <h3 className="text-3xl font-bold text-gray-800">
+                {now.toLocaleTimeString("id-ID")}
+              </h3>
+              <p
+                className={`text-sm font-medium mt-1 ${
+                  attendedAt ? "text-[#4F7942]" : "text-amber-600"
+                }`}
               >
-                <CheckCircle2 size={20} />
-                {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
-              </button>
-            </>
+                {attendedAt
+                  ? `Sudah absen pukul ${formatTime(attendedAt)}`
+                  : "Kamu belum absen hari ini"}
+              </p>
+            </div>
+          </div>
+          {loading ? (
+            <div className="flex items-center">
+              <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <button
+              onClick={handleAttendance}
+              disabled={!!attendedAt}
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed ${attendedAt ? "bg-gray-200" : ""}`}
+            >
+              <CheckCircle2 size={20} />
+              {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
+            </button>
           )}
         </div>
 

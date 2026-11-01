@@ -72,6 +72,11 @@ function ClassAdmin() {
   };
 
   const handleEdit = (item) => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+
     setForm({ name: item.name });
     setEditId(item._id);
   };

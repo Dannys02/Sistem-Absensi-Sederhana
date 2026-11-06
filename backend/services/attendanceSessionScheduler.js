@@ -82,50 +82,70 @@ const createTodaySession = async () => {
   }
 };
 
-// Memproses Alpha untuk sesi yang sudah berakhir
+// Memproses Alpha HANYA untuk sesi HARI INI yang baru saja berakhir
 const processAbsentStudents = async () => {
   try {
     const now = new Date();
+    const dateString = getJakartaDateString();
+    const { startOfDay, endOfDay } = getJakartaDayRange(dateString);
 
-    const sessions = await AttendanceSession.find();
+    // 1. Cari sesi HARI INI saja (tidak perlu query seluruh riwayat sesi lama)
+    const session = await AttendanceSession.findOne({
+      date: { $gte: startOfDay, $lt: endOfDay },
+    });
 
-    for (const session of sessions) {
-      const sessionDate = getJakartaDateString(session.date);
-      const endDateTime = getJakartaDateTime(sessionDate, session.endTime);
+    // Jika sesi hari ini belum ada, tidak ada yang perlu diproses
+    if (!session) return;
 
-      // Lewati sesi yang belum berakhir
-      if (now < endDateTime) continue;
+    const endDateTime = getJakartaDateTime(dateString, session.endTime);
 
-      // Cari siswa yang belum punya catatan absensi   
-      const students = await Student.find().select("_id");
+    // Jika sesi hari ini belum berakhir, jangan beri status Alpha
+    if (now < endDateTime) return;
 
-      if (students.length === 0) continue;
+    // 2. Ambil seluruh catatan absensi yang sudah tercatat pada sesi hari ini
+    // Termasuk yang statusnya: "Hadir", "Telat", "Izin", "Sakit", "Menunggu Approval", maupun "Alpha"
+    const existingAttendances = await Attendance.find({
+      sessionId: session._id,
+    }).select("studentId");
 
-      const operations = students.map((student) => ({
-        updateOne: {
-          filter: {
+    const studentIdsWithAttendance = existingAttendances.map((att) =>
+      att.studentId.toString(),
+    );
+
+    // 3. Cari siswa yang SAMA SEKALI belum memiliki catatan absensi pada sesi ini
+    // Siswa dengan permohonan izin/sakit yang statusnya 'Menunggu Approval'
+    // secara aman TIDAK akan dimasukkan ke list ini karena record-nya sudah ada di database
+    const studentsWithoutAttendance = await Student.find({
+      _id: { $nin: studentIdsWithAttendance },
+    }).select("_id");
+
+    if (studentsWithoutAttendance.length === 0) return;
+
+    // 4. Catat status Alpha untuk siswa yang belum absen
+    const operations = studentsWithoutAttendance.map((student) => ({
+      updateOne: {
+        filter: {
+          studentId: student._id,
+          sessionId: session._id,
+        },
+        update: {
+          $setOnInsert: {
             studentId: student._id,
             sessionId: session._id,
+            status: "Alpha",
           },
-          update: {
-            $setOnInsert: {
-              studentId: student._id,
-              sessionId: session._id,
-              status: "Alpha",
-            },
-          },
-          upsert: true,
         },
-      }));
+        upsert: true,
+      },
+    }));
 
-      const result = await Attendance.bulkWrite(operations);
-      
-      if (result.upsertedCount > 0) {
-        console.log(
-          `Sesi ${session._id}: ` +
-          `${result.upsertedCount} siswa diberi Alpha.`
-        );
-      }
+    const result = await Attendance.bulkWrite(operations);
+
+    if (result.upsertedCount > 0) {
+      console.log(
+        `[Scheduler Alpha] Sesi hari ini (${dateString}): ` +
+        `${result.upsertedCount} siswa yang tidak hadir otomatis diberi status Alpha.`
+      );
     }
   } catch (err) {
     console.error("Gagal memproses Alpha:", err.message);
@@ -143,7 +163,7 @@ const startAttendanceSessionScheduler = () => {
     { timezone: TIMEZONE },
   );
 
-  // Memeriksa Alpha setiap 5 menit
+  // Memeriksa Alpha setiap 5 menit khusus untuk sesi hari ini yang baru berakhir
   cron.schedule(
     "*/5 * * * *",
     async () => {
@@ -152,7 +172,7 @@ const startAttendanceSessionScheduler = () => {
     { timezone: TIMEZONE },
   );
 
-  console.log("Scheduler sesi dan Alpha aktif dengan konfigurasi dinamis.");
+  console.log("Scheduler sesi dan Alpha aktif dengan konfigurasi dinamis & optimasi hari ini.");
 };
 
 module.exports = {

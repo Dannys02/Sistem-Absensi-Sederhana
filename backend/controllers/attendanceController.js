@@ -469,6 +469,34 @@ const getAttendanceRecapByAdmin = async (req, res) => {
     // 5. Hitung total data sebelum pagination
     const totalData = await Attendance.countDocuments(attendanceFilter);
 
+    // Jika isExport=true, kembalikan semua data tanpa limit & skip pagination
+    const isExport = req.query.isExport === "true";
+    if (isExport) {
+      const allAttendance = await Attendance.find(attendanceFilter)
+        .populate({
+          path: "studentId",
+          populate: [
+            { path: "userId", select: "name email" },
+            { path: "classId", select: "name" },
+          ],
+        })
+        .populate({
+          path: "sessionId",
+          select: "date startTime lateThreshold endTime",
+        })
+        .sort({ createdAt: -1, _id: -1 });
+
+      return success(res, 200, "Berhasil mengambil seluruh data rekap untuk export", {
+        data: allAttendance,
+        pagination: {
+          page: 1,
+          limit: totalData,
+          totalData,
+          totalPages: 1,
+        },
+      });
+    }
+
     const totalPages = Math.ceil(totalData / limit);
 
     // 6. Ambil data untuk halaman yang diminta

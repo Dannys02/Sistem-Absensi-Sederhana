@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const AttendanceSession = require("../models/AttendanceSession");
+const AttendanceSetting = require("../models/AttendanceSetting");
 const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
 
@@ -11,9 +12,52 @@ const {
 
 const TIMEZONE = "Asia/Jakarta";
 
-// Membuat sesi absensi untuk hari ini
+// Mendapatkan index hari saat ini di Asia/Jakarta (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
+const getJakartaDayOfWeek = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE,
+    weekday: "short",
+  }).format(new Date());
+
+  const daysMap = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return daysMap[parts] !== undefined ? daysMap[parts] : new Date().getDay();
+};
+
+// Membuat sesi absensi untuk hari ini berdasarkan pengaturan admin
 const createTodaySession = async () => {
   try {
+    // 1. Ambil pengaturan sesi dari database (atau fallback ke default / .env)
+    let setting = await AttendanceSetting.findOne();
+    if (!setting) {
+      setting = await AttendanceSetting.create({
+        startTime: process.env.START_TIME || "06:00",
+        lateThreshold: process.env.LATE_THRESHOLD || "06:30",
+        endTime: process.env.END_TIME || "07:00",
+        activeDays: [1, 2, 3, 4, 5],
+        isAutomated: true,
+      });
+    }
+
+    // 2. Cek apakah otomasi sedang diaktifkan
+    if (!setting.isAutomated) {
+      return;
+    }
+
+    // 3. Cek apakah hari ini termasuk hari aktif otomasi
+    const todayDay = getJakartaDayOfWeek();
+    if (!setting.activeDays.includes(todayDay)) {
+      return;
+    }
+
     const dateString = getJakartaDateString();
     const { startOfDay, endOfDay } = getJakartaDayRange(dateString);
 
@@ -22,20 +66,19 @@ const createTodaySession = async () => {
     });
 
     if (existingSession) {
-      console.log("Sesi absensi sudah tersedia.");
       return;
     }
 
     const session = await AttendanceSession.create({
       date: startOfDay,
-      startTime: process.env.START_TIME,
-      lateThreshold: process.env.LATE_THRESHOLD,
-      endTime: process.env.END_TIME,
+      startTime: setting.startTime,
+      lateThreshold: setting.lateThreshold,
+      endTime: setting.endTime,
     });
 
-    console.log(`Sesi ${dateString} berhasil dibuat. ID: ${session._id}`);
+    console.log(`[Scheduler] Sesi ${dateString} otomatis dibuat. ID: ${session._id} (${setting.startTime} - ${setting.endTime})`);
   } catch (err) {
-    console.error("Gagal membuat sesi absensi:", err.message);
+    console.error("Gagal membuat sesi absensi otomatis:", err.message);
   }
 };
 
@@ -77,10 +120,12 @@ const processAbsentStudents = async () => {
 
       const result = await Attendance.bulkWrite(operations);
       
-      console.log(
-        `Sesi ${session._id}: ` +
-        `${result.upsertedCount} siswa diberi Alpha.`,
-      );
+      if (result.upsertedCount > 0) {
+        console.log(
+          `Sesi ${session._id}: ` +
+          `${result.upsertedCount} siswa diberi Alpha.`
+        );
+      }
     }
   } catch (err) {
     console.error("Gagal memproses Alpha:", err.message);
@@ -89,11 +134,10 @@ const processAbsentStudents = async () => {
 
 // Menjalankan scheduler
 const startAttendanceSessionScheduler = () => {
-  // Membuat sesi setiap Senin-Jumat pukul 06:50 WIB
+  // Mengecek dan membuat sesi setiap menit (jika hari aktif & belum ada sesi)
   cron.schedule(
     "* * * * *",
     async () => {
-      console.log("Cron pembuatan sesi berjalan.");
       await createTodaySession();
     },
     { timezone: TIMEZONE },
@@ -108,7 +152,7 @@ const startAttendanceSessionScheduler = () => {
     { timezone: TIMEZONE },
   );
 
-  console.log("Scheduler sesi dan Alpha aktif.");
+  console.log("Scheduler sesi dan Alpha aktif dengan konfigurasi dinamis.");
 };
 
 module.exports = {

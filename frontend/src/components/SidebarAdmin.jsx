@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { House, Building2, Users, ClipboardCheck } from "lucide-react";
+import { House, Building2, Users, ClipboardCheck, Sliders } from "lucide-react";
 
 function Sidebar({ mobileResponsive }) {
   const location = useLocation();
@@ -77,6 +77,18 @@ function Sidebar({ mobileResponsive }) {
             >
               <ClipboardCheck className="w-5 h-5" />
               <span>Izin / Sakit</span>
+            </Link>
+
+            <Link
+              to="/attendance/settings"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-150 ${
+                isActive("/attendance/settings")
+                  ? "bg-[#4F7942] text-white shadow-sm"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              <Sliders className="w-5 h-5" />
+              <span>Otomasi Sesi</span>
             </Link>
           </nav>
         </div>

@@ -22,6 +22,11 @@ const {
   getTodayAttendanceSession
 } = require("../controllers/attendanceSessionController");
 
+const {
+  getAttendanceSetting,
+  updateAttendanceSetting,
+} = require("../controllers/attendanceSettingController");
+
 const { getSubmitLeaveRequestByAdmin, approvedAttendanceLeaveByAdmin, rejectAttendanceLeaveByAdmin, markAbsentStudents, getStudentsWithoutAttendanceToday, getAttendanceRecapByAdmin } = require("../controllers/attendanceController");
 
 // validasi request body
@@ -70,6 +75,10 @@ router.delete("/delete-class/:id", deleteClass);
 // Attendance Session
 router.get("/attendance-sessions/today", getTodayAttendanceSession);
 router.post("/attendance-sessions", createAttendanceSession);
+
+// Attendance Settings (Pengaturan Otomasi Sesi)
+router.get("/attendance-settings", getAttendanceSetting);
+router.put("/attendance-settings", updateAttendanceSetting);
 
 // Attendance Student yang izin/sakit
 router.get("/attendance/leave", getSubmitLeaveRequestByAdmin);

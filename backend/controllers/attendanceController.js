@@ -1,7 +1,9 @@
 const Attendance = require("../models/Attendance");
 const User = require("../models/User");
 const Student = require("../models/Student");
+const Class = require("../models/Class");
 const AttendanceSession = require("../models/AttendanceSession");
+const puppeteer = require("puppeteer");
 const {
   getJakartaDayRange,
   getJakartaDateString,
@@ -581,6 +583,396 @@ const markAbsentStudents = async (req, res) => {
   }
 };
 
+// Download PDF Rekap menggunakan Puppeteer
+const downloadAttendanceRecapPdf = async (req, res) => {
+  let browser = null;
+  try {
+    const { date, startDate, endDate, classId, studentId, status: statusQuery } = req.query;
+
+    const validDate = (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+      }
+      const parsed = new Date(`${value}T00:00:00.000Z`);
+      return (
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === value
+      );
+    };
+
+    if (date && (startDate || endDate)) {
+      return error(
+        res,
+        400,
+        "Gunakan date atau startDate dan endDate, jangan keduanya",
+      );
+    }
+
+    const sessionFilter = {};
+    let dateFilterLabel = "Semua Tanggal";
+
+    if (date) {
+      if (!validDate(date)) {
+        return error(res, 400, "Format date harus YYYY-MM-DD");
+      }
+      const { startOfDay, endOfDay } = getJakartaDayRange(date);
+      sessionFilter.date = { $gte: startOfDay, $lt: endOfDay };
+      dateFilterLabel = new Date(date).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Jakarta",
+      });
+    } else if (startDate || endDate) {
+      if (!startDate || !endDate) {
+        return error(res, 400, "startDate dan endDate harus diisi bersamaan");
+      }
+      if (!validDate(startDate) || !validDate(endDate)) {
+        return error(res, 400, "Format tanggal harus YYYY-MM-DD");
+      }
+      if (startDate > endDate) {
+        return error(res, 400, "startDate tidak boleh setelah endDate");
+      }
+      const { startOfDay } = getJakartaDayRange(startDate);
+      const { endOfDay } = getJakartaDayRange(endDate);
+      sessionFilter.date = { $gte: startOfDay, $lt: endOfDay };
+
+      const fStart = new Date(startDate).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Jakarta",
+      });
+      const fEnd = new Date(endDate).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Jakarta",
+      });
+      dateFilterLabel = `${fStart} s/d ${fEnd}`;
+    }
+
+    const attendanceFilter = {};
+
+    if (Object.keys(sessionFilter).length > 0) {
+      const sessions = await AttendanceSession.find(sessionFilter).select("_id");
+      attendanceFilter.sessionId = {
+        $in: sessions.map((session) => session._id),
+      };
+    }
+
+    if (statusQuery) {
+      const statuses = Array.isArray(statusQuery) ? statusQuery : [statusQuery];
+      const allowedStatuses = [
+        "Hadir",
+        "Telat",
+        "Izin",
+        "Sakit",
+        "Alpha",
+        "Menunggu Approval",
+      ];
+      if (!statuses.every((s) => allowedStatuses.includes(s))) {
+        return error(res, 400, "Status absensi tidak valid");
+      }
+      attendanceFilter.status = { $in: statuses };
+    }
+
+    const studentFilter = {};
+    let classNameLabel = "Semua Kelas";
+
+    if (classId) {
+      if (!mongoose.Types.ObjectId.isValid(classId)) {
+        return error(res, 400, "Format ID kelas tidak valid");
+      }
+      studentFilter.classId = classId;
+      const foundClass = await Class.findById(classId);
+      if (foundClass) classNameLabel = foundClass.name;
+    }
+
+    if (studentId) {
+      if (!mongoose.Types.ObjectId.isValid(studentId)) {
+        return error(res, 400, "Format ID siswa tidak valid");
+      }
+      studentFilter._id = studentId;
+    }
+
+    if (classId || studentId) {
+      const students = await Student.find(studentFilter).select("_id");
+      attendanceFilter.studentId = {
+        $in: students.map((s) => s._id),
+      };
+    }
+
+    const attendanceList = await Attendance.find(attendanceFilter)
+      .populate({
+        path: "studentId",
+        populate: [
+          { path: "userId", select: "name email" },
+          { path: "classId", select: "name" },
+        ],
+      })
+      .populate({
+        path: "sessionId",
+        select: "date startTime lateThreshold endTime",
+      })
+      .sort({ createdAt: -1, _id: -1 });
+
+    const printedAt = new Date().toLocaleString("id-ID", {
+      dateStyle: "full",
+      timeStyle: "medium",
+      timeZone: "Asia/Jakarta",
+    });
+
+    const formatTanggal = (dateStr) => {
+      if (!dateStr) return "-";
+      return new Date(dateStr).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Jakarta",
+      });
+    };
+
+    const formatJam = (dateStr) => {
+      if (!dateStr) return "-";
+      return new Date(dateStr).toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Jakarta",
+      });
+    };
+
+    const statusBadgeClass = (s) => {
+      switch (s) {
+        case "Hadir":
+          return "background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;";
+        case "Telat":
+          return "background: #fef3c7; color: #92400e; border: 1px solid #fde68a;";
+        case "Izin":
+          return "background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;";
+        case "Sakit":
+          return "background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;";
+        case "Alpha":
+          return "background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3;";
+        default:
+          return "background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0;";
+      }
+    };
+
+    const rowsHtml = attendanceList.length === 0
+      ? `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">Tidak ada data absensi yang sesuai filter</td></tr>`
+      : attendanceList.map((row, idx) => {
+          const student = row.studentId || {};
+          const user = student.userId || {};
+          const kls = student.classId || {};
+          const session = row.sessionId || {};
+          const st = row.status || "-";
+          const badgeStyle = statusBadgeClass(st);
+
+          return `
+            <tr>
+              <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+              <td style="font-weight: 600; color: #0f172a;">${user.name || "-"}</td>
+              <td>${student.nis || "-"}</td>
+              <td>${kls.name || "-"}</td>
+              <td>${formatTanggal(session.date || row.createdAt)}</td>
+              <td>${row.checkInTime ? formatJam(row.checkInTime) + " WIB" : "-"}</td>
+              <td style="text-align: center;">
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; ${badgeStyle}">
+                  ${st}
+                </span>
+              </td>
+              <td style="color: #475569;">${row.reason || "-"}</td>
+            </tr>
+          `;
+        }).join("");
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="id">
+      <head>
+        <meta charset="UTF-8">
+        <title>Laporan Rekapitulasi Absensi</title>
+        <style>
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            padding: 24px 30px;
+            font-size: 11px;
+            line-height: 1.4;
+          }
+          .header-table {
+            width: 100%;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+          }
+          .title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+          }
+          .subtitle {
+            font-size: 12px;
+            color: #475569;
+            margin-top: 2px;
+            font-weight: 500;
+          }
+          .meta-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 14px;
+          }
+          .meta-row {
+            display: table-row;
+          }
+          .meta-cell {
+            display: table-cell;
+            padding: 3px 10px 3px 0;
+            font-size: 11px;
+          }
+          .meta-label {
+            color: #64748b;
+            font-weight: 500;
+          }
+          .meta-val {
+            color: #0f172a;
+            font-weight: 600;
+          }
+          table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+          }
+          table.data-table th {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: 600;
+            text-align: left;
+            padding: 7px 8px;
+            border: 1px solid #0f172a;
+            text-transform: uppercase;
+            font-size: 9.5px;
+            letter-spacing: 0.3px;
+          }
+          table.data-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            vertical-align: middle;
+          }
+          table.data-table tr:nth-child(even) td {
+            background-color: #f8fafc;
+          }
+          .footer-note {
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="vertical-align: middle;">
+              <div class="title">Laporan Rekapitulasi Absensi Siswa</div>
+              <div class="subtitle">Sistem Informasi Manajemen Absensi - AbsensiKu</div>
+            </td>
+            <td style="text-align: right; vertical-align: middle; color: #64748b; font-size: 10px;">
+              Dokumen Resmi Sistem
+            </td>
+          </tr>
+        </table>
+
+        <div class="meta-grid">
+          <div class="meta-row">
+            <div class="meta-cell"><span class="meta-label">Kelas:</span> <span class="meta-val">${classNameLabel}</span></div>
+            <div class="meta-cell"><span class="meta-label">Filter Status:</span> <span class="meta-val">${statusQuery || "Semua Status"}</span></div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-cell"><span class="meta-label">Periode Tanggal:</span> <span class="meta-val">${dateFilterLabel}</span></div>
+            <div class="meta-cell"><span class="meta-label">Total Data:</span> <span class="meta-val">${attendanceList.length} Baris Absensi</span></div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-cell" style="padding-top: 5px;"><span class="meta-label">Waktu Cetak:</span> <span class="meta-val">${printedAt} WIB</span></div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 25px; text-align: center;">No</th>
+              <th>Nama Siswa</th>
+              <th style="width: 75px;">NIS</th>
+              <th style="width: 80px;">Kelas</th>
+              <th style="width: 90px;">Tanggal</th>
+              <th style="width: 80px;">Waktu Absen</th>
+              <th style="width: 70px; text-align: center;">Status</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer-note">
+          <span>Dicetak secara otomatis oleh sistem AbsensiKu</span>
+          <span>Halaman 1 dari 1</span>
+        </div>
+      </body>
+      </html>
+    `;
+
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "12mm",
+        right: "12mm",
+        bottom: "12mm",
+        left: "12mm",
+      },
+    });
+
+    await browser.close();
+    browser = null;
+
+    const safeDate = new Date().toISOString().slice(0, 10);
+    const filename = `Laporan_Absensi_${safeDate}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.status(200).send(pdfBuffer);
+  } catch (err) {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+    console.error("Puppeteer PDF generation error:", err);
+    return error(res, 500, `Gagal mencetak PDF: ${err.message}`);
+  }
+};
+
 module.exports = {
   checkIn,
   getAttendanceByStudent,
@@ -591,4 +983,5 @@ module.exports = {
   markAbsentStudents,
   getStudentsWithoutAttendanceToday,
   getAttendanceRecapByAdmin,
+  downloadAttendanceRecapPdf,
 };

@@ -198,118 +198,31 @@ function AttendanceRecapAdmin() {
     }
   };
 
-  // Print / PDF Laporan
+  // Print / PDF Laporan via Puppeteer Backend
   const handlePrint = async () => {
     setExporting(true);
     try {
       const q = buildQuery(1, true);
-      const res = await api.get(`/admin/attendance/recap?${q}`);
-      const dataToPrint = res.data?.data?.data || [];
+      const res = await api.get(`/admin/attendance/recap/pdf?${q}`, {
+        responseType: "blob",
+      });
 
-      if (dataToPrint.length === 0) {
-        alert("Tidak ada data untuk dicetak");
-        return;
-      }
-
-      const selectedClassName =
-        classes.find((c) => c._id === classId)?.name || "Semua Kelas";
-
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Laporan Rekap Absensi Siswa</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; color: #1e293b; }
-            h2, h4 { margin: 4px 0; text-align: center; }
-            .header-info { margin: 15px 0; font-size: 13px; line-height: 1.6; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
-            th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; }
-            th { background-color: #f1f5f9; font-weight: bold; }
-            .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-            .hadir { background: #dcfce7; color: #166534; }
-            .telat { background: #fef3c7; color: #92400e; }
-            .izin { background: #dbeafe; color: #1e40af; }
-            .sakit { background: #f3e8ff; color: #6b21a8; }
-            .alpha { background: #ffe4e6; color: #9f1239; }
-            @media print {
-              body { margin: 0; }
-              @page { size: portrait; margin: 1.5cm; }
-            }
-          </style>
-        </head>
-        <body>
-          <h2>LAPORAN REKAPITULASI ABSENSI SISWA</h2>
-          <h4>Sistem Manajemen AbsensiKu</h4>
-          <hr style="border: 0; border-top: 2px solid #334155; margin: 10px 0 20px 0;" />
-          
-          <div class="header-info">
-            <strong>Kelas:</strong> ${selectedClassName}<br/>
-            <strong>Filter Status:</strong> ${status || "Semua Status"}<br/>
-            <strong>Dicetak Pada:</strong> ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB<br/>
-            <strong>Total Rekap:</strong> ${dataToPrint.length} Siswa
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 35px; text-align: center;">No</th>
-                <th>Nama Siswa</th>
-                <th>NIS</th>
-                <th>Kelas</th>
-                <th>Tanggal</th>
-                <th>Waktu Absen</th>
-                <th style="text-align: center;">Status</th>
-                <th>Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${dataToPrint
-                .map((row, idx) => {
-                  const student = row.studentId || {};
-                  const user = student.userId || {};
-                  const kls = student.classId || {};
-                  const session = row.sessionId || {};
-                  const st = row.status || "-";
-                  const badgeClass =
-                    st === "Hadir"
-                      ? "hadir"
-                      : st === "Telat"
-                      ? "telat"
-                      : st === "Izin"
-                      ? "izin"
-                      : st === "Sakit"
-                      ? "sakit"
-                      : "alpha";
-
-                  return `
-                  <tr>
-                    <td style="text-align: center;">${idx + 1}</td>
-                    <td><strong>${user.name || "-"}</strong></td>
-                    <td>${student.nis || "-"}</td>
-                    <td>${kls.name || "-"}</td>
-                    <td>${formatTanggalIndo(session.date || row.createdAt)}</td>
-                    <td>${row.checkInTime ? formatJamIndo(row.checkInTime) : "-"}</td>
-                    <td style="text-align: center;"><span class="badge ${badgeClass}">${st}</span></td>
-                    <td>${row.reason || "-"}</td>
-                  </tr>
-                `;
-                })
-                .join("")}
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const safeDate = new Date().toISOString().slice(0, 10);
+      const filename = `Laporan_Absensi_${safeDate}.pdf`;
+      
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
-      console.error("Gagal mencetak laporan:", err);
-      alert("Gagal memproses cetak PDF");
+      console.error("Gagal mengunduh PDF laporan:", err);
+      alert("Gagal memproses cetak PDF. Pastikan data tersedia dan server aktif.");
     } finally {
       setExporting(false);
     }

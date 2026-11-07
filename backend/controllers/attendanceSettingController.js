@@ -1,4 +1,6 @@
 const AttendanceSetting = require("../models/AttendanceSetting");
+const AttendanceSession = require("../models/AttendanceSession");
+const { getJakartaDateString, getJakartaDayRange } = require("../utils/jakartaDate");
 const { success, error } = require("../utils/responseHelper");
 
 // Mendapatkan konfigurasi sesi absensi saat ini (atau buat default jika belum ada)
@@ -74,7 +76,29 @@ const updateAttendanceSetting = async (req, res) => {
 
     await setting.save();
 
-    return success(res, 200, "Pengaturan sesi absensi berhasil diperbarui", setting);
+    // SINKRONISASI: Jika sesi hari ini sudah ada, perbarui jamnya agar langsung sinkron
+    const dateString = getJakartaDateString();
+    const { startOfDay, endOfDay } = getJakartaDayRange(dateString);
+
+    const todaySession = await AttendanceSession.findOne({
+      date: { $gte: startOfDay, $lt: endOfDay },
+    });
+
+    if (todaySession) {
+      todaySession.startTime = startTime;
+      todaySession.lateThreshold = lateThreshold;
+      todaySession.endTime = endTime;
+      await todaySession.save();
+    }
+
+    return success(
+      res,
+      200,
+      todaySession
+        ? "Pengaturan berhasil disimpan dan sesi absensi hari ini telah disinkronkan!"
+        : "Pengaturan sesi absensi berhasil diperbarui",
+      setting
+    );
   } catch (err) {
     return error(res, 500, err.message);
   }

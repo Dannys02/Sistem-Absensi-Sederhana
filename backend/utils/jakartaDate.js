@@ -54,8 +54,26 @@ const getJakartaDateTime = (dateString, timeString) => {
   return date;
 };
 
+const getJakartaTimeString = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+
+  return `${values.hour}:${values.minute}`;
+};
+
 module.exports = {
   getJakartaDateString,
+  getJakartaTimeString,
   getJakartaDayRange,
   getJakartaDateTime,
 };

@@ -6,6 +6,7 @@ const Student = require("../models/Student");
 
 const {
   getJakartaDateString,
+  getJakartaTimeString,
   getJakartaDayRange,
   getJakartaDateTime,
 } = require("../utils/jakartaDate");
@@ -55,6 +56,13 @@ const createTodaySession = async () => {
     // 3. Cek apakah hari ini termasuk hari aktif otomasi
     const todayDay = getJakartaDayOfWeek();
     if (!setting.activeDays.includes(todayDay)) {
+      return;
+    }
+
+    // 4. Cek apakah waktu sekarang sudah memasuki jam mulai absensi (Konsep 1)
+    const currentJakartaTime = getJakartaTimeString();
+    if (currentJakartaTime < setting.startTime) {
+      // Belum memasuki jam mulai masuk absensi, jangan buat sesi dulu
       return;
     }
 

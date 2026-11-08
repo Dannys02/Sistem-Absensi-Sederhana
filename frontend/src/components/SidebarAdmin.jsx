@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Sliders,
   FileSpreadsheet,
+  MapPin,
 } from "lucide-react";
 
 function Sidebar({ mobileResponsive }) {
@@ -84,6 +85,18 @@ function Sidebar({ mobileResponsive }) {
             >
               <ClipboardCheck className="w-5 h-5" />
               <span>Izin / Sakit</span>
+            </Link>
+
+            <Link
+              to="/location/management"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-150 ${
+                isActive("/location/management")
+                  ? "bg-[#4F7942] text-white shadow-sm"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              <MapPin className="w-5 h-5" />
+              <span>Lokasi Absensi</span>
             </Link>
 
             <Link

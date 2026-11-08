@@ -29,6 +29,14 @@ const {
 
 const { getSubmitLeaveRequestByAdmin, approvedAttendanceLeaveByAdmin, rejectAttendanceLeaveByAdmin, markAbsentStudents, getStudentsWithoutAttendanceToday, getAttendanceRecapByAdmin, downloadAttendanceRecapPdf } = require("../controllers/attendanceController");
 
+const {
+  getAllLocations,
+  createLocation,
+  updateLocation,
+  toggleLocationStatus,
+  deleteLocation,
+} = require("../controllers/locationController");
+
 // validasi request body
 const {
   validateCreateClass,
@@ -89,5 +97,12 @@ router.post("/attendance-sessions/:sessionId/mark-absent", markAbsentStudents);
 router.get("/student-without-attendance", getStudentsWithoutAttendanceToday)
 router.get("/attendance/recap", getAttendanceRecapByAdmin);
 router.get("/attendance/recap/pdf", downloadAttendanceRecapPdf);
+
+// Lokasi Absensi Geofencing (Admin)
+router.get("/locations", getAllLocations);
+router.post("/locations", createLocation);
+router.put("/locations/:id", updateLocation);
+router.patch("/locations/:id/toggle", toggleLocationStatus);
+router.delete("/locations/:id", deleteLocation);
 
 module.exports = router;

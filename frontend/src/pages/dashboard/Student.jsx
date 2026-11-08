@@ -10,6 +10,8 @@ import {
   LogOut,
   Send,
   X,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 
 function Student() {
@@ -26,6 +28,9 @@ function Student() {
   const [showError, setShowError] = useState(false);
   const [error, setError] = useState("");
   const [errorAttendance, setErrorAttendance] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [activeLocations, setActiveLocations] = useState([]);
 
   useEffect(() => {
     if (!showSuccess && !showError) return;
@@ -129,7 +134,17 @@ function Student() {
 
   useEffect(() => {
     fetchSession();
+    fetchActiveLocations();
   }, []);
+
+  const fetchActiveLocations = async () => {
+    try {
+      const res = await api.get("/siswa/locations/active");
+      setActiveLocations(res.data?.data || []);
+    } catch (err) {
+      console.error("Gagal mengambil data lokasi aktif:", err);
+    }
+  };
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -192,28 +207,66 @@ function Student() {
   ];
 
   const handleAttendance = async () => {
+    // Jika tidak ada dukungan Geolocation di browser
+    if (!navigator.geolocation) {
+      setErrorAttendance("Browser perangkat Anda tidak mendukung fitur Geolocation.");
+      setShowError(true);
+      return;
+    }
+
+    setLocating(true);
     setLoading(true);
 
-    try {
-      const response = await api.post("siswa/attendance/check-in");
-      setSuccess(response.data.message);
-      setShowSuccess(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+        setLocating(false);
 
-      fetchSession();
-    } catch (err) {
-      const responseData = err.response?.data;
-      if (responseData?.errors) {
-        setErrorAttendance(responseData?.errors);
-      } else if (responseData?.message) {
-        setErrorAttendance(responseData.message);
-      } else {
-        setErrorAttendance("Gagal melakukan absensi. Silakan coba lagi.");
-        console.error("Error check-in:", err);
+        try {
+          const response = await api.post("siswa/attendance/check-in", {
+            latitude,
+            longitude,
+          });
+          setSuccess(response.data.message);
+          setShowSuccess(true);
+          fetchSession();
+        } catch (err) {
+          const responseData = err.response?.data;
+          if (responseData?.errors) {
+            setErrorAttendance(responseData?.errors);
+          } else if (responseData?.message) {
+            setErrorAttendance(responseData.message);
+          } else {
+            setErrorAttendance("Gagal melakukan absensi. Silakan coba lagi.");
+            console.error("Error check-in:", err);
+          }
+          setShowError(true);
+        } finally {
+          setLoading(false);
+        }
+      },
+      (geoErr) => {
+        setLocating(false);
+        setLoading(false);
+        console.error("Geolocation error:", geoErr);
+        let msg = "Akses lokasi diperlukan untuk melakukan absensi.";
+        if (geoErr.code === 1) {
+          msg = "Izin lokasi (GPS) ditolak. Silakan izinkan akses lokasi di browser untuk check-in.";
+        } else if (geoErr.code === 2) {
+          msg = "Posisi perangkat tidak dapat dideteksi. Pastikan GPS aktif.";
+        } else if (geoErr.code === 3) {
+          msg = "Waktu permintaan lokasi habis (timeout). Silakan coba lagi.";
+        }
+        setErrorAttendance(msg);
+        setShowError(true);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
       }
-      setShowError(true);
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   // api kirim pengajuan izin/sakit
@@ -301,8 +354,9 @@ function Student() {
             </div>
           </div>
           {loading ? (
-            <div className="flex items-center">
-              <div className="w-6 h-6 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex items-center gap-2 text-sm text-[#4F7942] font-semibold">
+              <div className="w-5 h-5 border-3 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
+              <span>{locating ? "Mengecek Posisi GPS..." : "Memproses..."}</span>
             </div>
           ) : (
             <button
@@ -311,10 +365,24 @@ function Student() {
               className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed ${attendedAt ? "bg-gray-200" : ""}`}
             >
               <CheckCircle2 size={20} />
-              {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
+              {attendedAt ? "Sudah Absen" : "Absen Sekarang (Validasi Lokasi)"}
             </button>
           )}
         </div>
+
+        {/* Info Lokasi Absensi Yang Tersedia */}
+        {activeLocations.length > 0 && (
+          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900">
+            <div className="flex items-center gap-2.5">
+              <MapPin className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>
+                <strong>Lokasi Check-in yang diizinkan:</strong>{" "}
+                {activeLocations.map((l) => `${l.name} (Radius ${l.radius}m)`).join(", ")}
+              </span>
+            </div>
+            <span className="text-emerald-700 font-medium">GPS Aktif Diperlukan</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((item, index) => (

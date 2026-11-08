@@ -2,8 +2,10 @@ const Attendance = require("../models/Attendance");
 const User = require("../models/User");
 const Student = require("../models/Student");
 const Class = require("../models/Class");
+const Location = require("../models/Location");
 const AttendanceSession = require("../models/AttendanceSession");
 const puppeteer = require("puppeteer");
+const { getDistanceInMeters } = require("../utils/geoHelper");
 const {
   getJakartaDayRange,
   getJakartaDateString,
@@ -65,14 +67,75 @@ const checkIn = async (req, res) => {
       return error(res, 400, "Sesi absensi sudah ditutup");
     }
 
+    // --- Validasi Geofencing / Titik Lokasi Absensi ---
+    const activeLocations = await Location.find({ isActive: true });
+
+    let matchedLocation = null;
+    let shortestDistance = null;
+    let closestLocationName = "";
+
+    // Jika admin telah mengatur minimal 1 lokasi aktif, wajibkan validasi posisi siswa
+    if (activeLocations.length > 0) {
+      const { latitude, longitude } = req.body;
+
+      if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
+        return error(
+          res,
+          400,
+          "Lokasi GPS tidak terdeteksi. Harap aktifkan izin lokasi (GPS) pada perangkat Anda untuk check-in."
+        );
+      }
+
+      const userLat = Number(latitude);
+      const userLng = Number(longitude);
+
+      if (isNaN(userLat) || isNaN(userLng)) {
+        return error(res, 400, "Data koordinat GPS tidak valid");
+      }
+
+      // Cek jarak siswa ke setiap lokasi aktif
+      for (const loc of activeLocations) {
+        const distance = getDistanceInMeters(userLat, userLng, loc.latitude, loc.longitude);
+
+        if (shortestDistance === null || distance < shortestDistance) {
+          shortestDistance = distance;
+          closestLocationName = loc.name;
+        }
+
+        if (distance <= loc.radius) {
+          matchedLocation = {
+            id: loc._id,
+            name: loc.name,
+            distance,
+          };
+          break; // Siswa berada di dalam radius lokasi ini
+        }
+      }
+
+      if (!matchedLocation) {
+        return error(
+          res,
+          403,
+          `Anda berada di luar area absensi. Jarak Anda sekitar ${Math.round(shortestDistance)} meter dari ${closestLocationName}. Pastikan Anda berada di lokasi yang ditentukan.`
+        );
+      }
+    }
+
     const status = checkInTime <= lateDateTime ? "Hadir" : "Telat";
 
-    // simpan absesi
+    // simpan absensi
     const attendance = await Attendance.create({
       studentId: student._id,
       sessionId: session._id,
       checkInTime,
       status,
+      locationId: matchedLocation ? matchedLocation.id : null,
+      locationName: matchedLocation ? matchedLocation.name : null,
+      userCoordinates: req.body.latitude !== undefined && req.body.longitude !== undefined ? {
+        latitude: Number(req.body.latitude),
+        longitude: Number(req.body.longitude),
+      } : undefined,
+      distanceMeters: matchedLocation ? matchedLocation.distance : null,
     });
 
     success(res, 201, "Berhasil melakukan absensi", attendance);

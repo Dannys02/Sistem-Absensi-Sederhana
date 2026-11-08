@@ -8,6 +8,8 @@ const {
   submitLeaveRequest,
 } = require("../controllers/attendanceController");
 
+const { getActiveLocations } = require("../controllers/locationController");
+
 // middleware autentikasi
 const {
   authenticate,
@@ -22,5 +24,6 @@ router.use(authenticate, authorize("siswa"));
 router.post("/attendance/check-in", checkIn);
 router.get("/attendance/me", getAttendanceByStudent);
 router.post("/attendance/leave", validateBody, submitLeaveRequest);
+router.get("/locations/active", getActiveLocations);
 
 module.exports = router;

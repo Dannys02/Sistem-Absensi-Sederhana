@@ -13,6 +13,7 @@ import StudentAdmin from "./pages/admin/StudentAdmin";
 import StudentLeave from "./pages/admin/StudentLeave";
 import AttendanceRecapAdmin from "./pages/admin/AttendanceRecapAdmin";
 import AttendanceSettingAdmin from "./pages/admin/AttendanceSettingAdmin";
+import LocationAdmin from "./pages/admin/LocationAdmin";
 import Student from "./pages/dashboard/Student";
 import { Routes, Route } from "react-router-dom";
 
@@ -59,6 +60,7 @@ function App() {
           <Route path="/class/management" element={<ClassAdmin />} />
           <Route path="/student/management" element={<StudentAdmin />} />
           <Route path="/student/leave" element={<StudentLeave />} />
+          <Route path="/location/management" element={<LocationAdmin />} />
           <Route path="/attendance/recap" element={<AttendanceRecapAdmin />} />
           <Route path="/attendance/settings" element={<AttendanceSettingAdmin />} />
         </Route>

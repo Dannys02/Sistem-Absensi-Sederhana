@@ -18,6 +18,23 @@ const attendanceSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    locationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
+      default: null,
+    },
+    locationName: {
+      type: String,
+      default: null,
+    },
+    userCoordinates: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+    },
+    distanceMeters: {
+      type: Number,
+      default: null,
+    },
     requestType: {
       type: String,
       enum: ["Izin", "Sakit"],

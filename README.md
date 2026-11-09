@@ -1,4 +1,4 @@
- AbsensiKu 📍⏱️
+ AbsensiKu
 
 **AbsensiKu** adalah aplikasi web manajemen kehadiran (absensi) sekolah modern yang dirancang untuk mencatat absensi siswa secara real-time, akurat, dan transparan antara siswa, pihak sekolah, dan orang tua.
 

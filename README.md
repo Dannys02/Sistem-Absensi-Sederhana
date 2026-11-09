@@ -1,116 +1,126 @@
- AbsensiKu 📍⏱️
+# AbsensiKu 📍⏱️
 
-**AbsensiKu** adalah aplikasi web manajemen kehadiran (absensi) sekolah modern yang dirancang untuk mencatat absensi siswa secara real-time, akurat, dan transparan antara siswa, pihak sekolah, dan orang tua.
+> 🌐 **Language:** **English** | [Bahasa Indonesia](./README.id.md)
 
----
-
-Mengapa Aplikasi Ini Dibuat? (Latar Belakang & Solusi)
-
-Pencatatan absensi manual di sekolah kerap menghadapi berbagai kendala:
-1. **Titip Absen & Manipulasi Kehadiran:** Siswa absen dari rumah atau menitipkan akun ke teman.
-   - **Solusi AbsensiKu:** Dilengkapi fitur **Geofencing (GPS & Radius)**. Siswa hanya dapat check-in jika posisi GPS perangkatnya terdeteksi berada di dalam radius area sekolah/gedung yang telah diizinkan oleh admin.
-2. **Keterlambatan yang Tidak Terdata Akurat:** Sulit memisahkan mana siswa yang hadir tepat waktu vs telat.
-   - **Solusi AbsensiKu:** Jam buka sesi, batas terlambat, dan jam tutup absensi diatur otomatis oleh sistem. Status "Hadir" atau "Telat" ditentukan secara presisi oleh server.
-3. **Surat Izin/Sakit Hilang atau Fiktif:**
-   - **Solusi AbsensiKu:** Siswa wajib mengunggah **bukti foto surat dokter atau surat orang tua** langsung ke aplikasi sebelum disetujui atau ditolak oleh admin.
-4. **Siswa Lupa Absen & Orang Tua Tidak Tahu:**
-   - **Solusi AbsensiKu:** Notifikasi otomatis melalui **WhatsApp** dan **Email** untuk mengingatkan siswa yang belum absen sebelum sesi ditutup, serta memberi tahu hasil persetujuan surat izin.
-5. **Rekap Laporan yang Memakan Waktu:**
-   - **Solusi AbsensiKu:** Ekspor laporan kehadiran instan ke format **Excel (CSV)** atau cetak dokumen **PDF resmi siap pakai via Puppeteer**.
+**AbsensiKu** is a modern web-based school attendance management application designed to record student attendance in real-time, accurately, and transparently between students, school administrators, and parents.
 
 ---
 
-Fitur Utama :
+## 🎯 Why Was This Built? (Problem & Solution)
 
-Sisi Siswa:
-- **Check-in Absensi Real-time:** Check-in sekali klik dengan validasi koordinat GPS perangkat.
-- **Pengajuan Izin / Sakit Online:** Formulir pengajuan izin disertai fitur unggah berkas surat dokter/surat izin (JPG, PNG, PDF).
-- **Riwayat Kehadiran Pribadi:** Memantau riwayat absen harian dan status pengajuan izin secara transparan.
-
-Sisi Admin (Sekolah):
-- **Dashboard Statistik:** Ringkasan jumlah kelas, total siswa terdaftar, kehadiran hari ini, izin pending, dan daftar siswa yang belum absen.
-- **Manajemen Titik Lokasi (Geofencing):** Menambah titik koordinat sekolah, menentukan radius toleransi (meter), serta menyalakan/mematikan area absensi sewaktu-waktu.
-- **Otomasi Sesi & Alpha Otomatis:** Sesi absensi berjalan harian secara otomatis. Siswa yang tidak hadir hingga jam sesi berakhir otomatis ditandai **Alpha** oleh sistem (*cron scheduler*).
-- **Persetujuan Izin & Pratinjau Dokumen:** Meninjau surat dokter/surat orang tua secara langsung melalui modal pratinjau sebelum menyetujui atau menolak izin.
-- **Rekap & Laporan Lengkap:** Filter rekapitulasi berdasarkan kelas, status absensi, dan rentang tanggal dengan ekspor CSV & cetak PDF langsung.
-- **Notifikasi WhatsApp & Email:** Pemberitahuan pengingat belum absen dan status izin secara otomatis.
+Manual attendance tracking in schools often faces several recurring challenges:
+1. **Proxy Attendance & Manipulation:** Students checking in from home or asking friends to check in for them.
+   - **AbsensiKu Solution:** Equipped with **Geofencing (GPS & Radius Validation)**. Students can only check in if their device's GPS coordinates are within the allowed radius of the school/building configured by the admin.
+2. **Inaccurate Late Tracking:** Difficulty distinguishing on-time arrivals from late arrivals.
+   - **AbsensiKu Solution:** Session start time, late threshold, and closing time are automatically enforced by the server. "Present" (*Hadir*) or "Late" (*Telat*) status is determined with precision.
+3. **Lost or Fake Leave/Sick Letters:**
+   - **AbsensiKu Solution:** Students can upload **proof of doctor's notes or parent letters** directly into the application for the admin to preview before approving or rejecting.
+4. **Students Forgetting to Check In & Uninformed Parents:**
+   - **AbsensiKu Solution:** Automated **WhatsApp** and **Email** notifications remind students who haven't checked in before the session closes, and immediately notify them when a leave request is approved or rejected.
+5. **Time-Consuming Monthly Recap Reports:**
+   - **AbsensiKu Solution:** Instant attendance report exports to **Excel (CSV)** or direct official **PDF generation powered by Puppeteer**.
 
 ---
 
-Teknologi yang Digunakan :
+## ✨ Key Features
+
+### 👨‍🎓 Student Portal
+- **Real-time GPS Check-in:** One-click attendance check-in with live device coordinate verification.
+- **Online Leave / Sick Request:** Submit leave or sick requests along with supporting documents (JPG, PNG, PDF).
+- **Personal Attendance History:** Track daily attendance status and leave approval results transparently.
+
+### 👨‍💼 Admin Portal (School)
+- **Analytics Dashboard:** Summary of total classes, registered students, today's attendance, pending leave requests, and a list of students who haven't checked in today.
+- **Location Management (Geofencing):** Add multiple school coordinates, set tolerance radius (in meters), and toggle locations active/inactive anytime.
+- **Session Automation & Auto-Alpha:** Daily attendance sessions run automatically. Students who do not check in by the session's end time are automatically marked **Alpha (Absent)** via a background *cron scheduler*.
+- **Leave Approval & Document Preview:** Inspect uploaded doctor's notes or parent letters directly in a preview modal before approving or rejecting.
+- **Comprehensive Recap & Export:** Filter attendance records by class, status, and date range, then export to CSV or download an official PDF report.
+- **WhatsApp & Email Notifications:** Automated reminders for unattended students and instant leave status updates.
+
+---
+
+## 🛠️ Tech Stack
 
 - **Frontend:** React (Vite), Tailwind CSS, Lucide React, Axios.
 - **Backend:** Node.js, Express.js.
 - **Database:** MongoDB & Mongoose.
-- **Validasi & Autentikasi:** JWT (JSON Web Token), Joi, Bcrypt.
-- **PDF & Dokumen:** Puppeteer (Server-side PDF generation), Multer (File Upload).
-- **Notifikasi & Scheduler:** Node-Cron, WhatsApp Gateway (Fonnte), Nodemailer (SMTP).
+- **Validation & Auth:** JWT (JSON Web Token), Joi, Bcrypt.
+- **PDF & File Handling:** Puppeteer (Server-side PDF generation), Multer (Document upload).
+- **Notifications & Scheduler:** Node-Cron, WhatsApp Gateway (Fonnte), Nodemailer (SMTP).
 
 ---
 
-Cara Menjalankan Aplikasi :
+## 🚀 Getting Started
 
-1. Persiapan Awal
-Pastikan komputer sudah terpasang:
-- [Node.js](https://nodejs.org/) (versi 18 ke atas)
-- MongoDB (Lokal atau MongoDB Atlas)
+### 1. Prerequisites
+Ensure you have the following installed:
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- MongoDB (Local instance or MongoDB Atlas)
 
-2. Konfigurasi Backend
-1. Masuk ke direktori `backend`:
+### 2. Backend Setup
+1. Navigate to the `backend` directory:
    ```bash
    cd backend
    ```
-2. Salin file lingkungan `.env`:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy the example environment file:
    ```bash
    cp .env.example .env
    ```
-3. Sesuaikan isi file `.env`:
+4. Configure your `.env` variables:
    ```env
    MONGO_URI=mongodb://localhost:27017/absensiku
    PORT=5000
    JWT_SECRET=absensiku_super_secret_123
    JWT_EXPIRE=1d
 
-    Opsional (untuk WhatsApp & Email)
-   FONNTE_TOKEN=token_fonnte_anda
+   # Optional (for WhatsApp & Email notifications)
+   FONNTE_TOKEN=your_fonnte_token
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
-   SMTP_USER=email_anda@gmail.com
-   SMTP_PASS=app_password_anda
+   SMTP_USER=your_email@gmail.com
+   SMTP_PASS=your_app_password
    ```
-4. Jalankan server backend:
+5. Start the backend server:
    ```bash
    npm run dev
    ```
 
-3. Konfigurasi Frontend
-1. Buka terminal baru dan masuk ke direktori `frontend`:
+### 3. Frontend Setup
+1. Open a new terminal and navigate to the `frontend` directory:
    ```bash
    cd frontend
    ```
-2. Pastikan file `.env` di frontend mengarah ke backend:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Ensure `.env` points to your backend API:
    ```env
    VITE_API_URL=http://localhost:5000/api
    ```
-3. Jalankan server frontend:
+4. Start the development server:
    ```bash
    npm run dev
    ```
-4. Buka tautan di browser: `http://localhost:5173`
+5. Open your browser at: `http://localhost:5173`
 
 ---
 
-Panduan Penggunaan Singkat :
+## 📖 Quick Usage Guide
 
-A. Alur Admin Pertama Kali:
-1. Login menggunakan akun Admin.
-2. Buka menu **Manajemen Kelas** untuk menambahkan daftar kelas (misal: *X RPL 1*).
-3. Buka menu **Lokasi Absensi** dan buat titik pusat sekolah (gunakan tombol *"Ambil Titik"* untuk memakai GPS saat ini atau isi koordinat dan radius toleransi misal 100 meter).
-4. Buka menu **Otomasi Sesi** untuk menentukan jam buka sesi absensi harian (misal: 06.00 - 07.00 WIB).
-5. Daftarkan akun siswa di menu **Manajemen Siswa** (sertakan nomor WhatsApp).
+### A. Initial Admin Workflow:
+1. Log in using an Admin account.
+2. Go to **Class Management** (*Manajemen Kelas*) to create classes (e.g., *X RPL 1*).
+3. Go to **Attendance Locations** (*Lokasi Absensi*) and add your school's coordinates (use the *"Get Current Location"* button or input Latitude, Longitude, and Radius manually, e.g., 100 meters).
+4. Go to **Session Automation** (*Otomasi Sesi*) to configure daily check-in hours (e.g., 06:00 - 07:00 WIB).
+5. Register student accounts in **Student Management** (*Manajemen Siswa*) along with their WhatsApp numbers.
 
-B. Alur Siswa Absen:
-1. Siswa login menggunakan email dan password yang telah didaftarkan.
-2. Di halaman dashboard, pastikan izin lokasi (GPS) pada browser telah diizinkan.
-3. Klik tombol **"Absen Sekarang"** saat sudah berada di area sekolah. Sistem akan otomatis memvalidasi koordinat siswa terhadap radius sekolah.
-4. Jika berhalangan hadir, klik tombol **"Ajukan Izin/Sakit"**, tulis alasan, dan unggah foto surat keterangan dokter/orang tua.
+### B. Student Attendance Workflow:
+1. Log in using a registered Student account.
+2. On the dashboard, allow browser location (GPS) permissions when prompted.
+3. Click **"Absen Sekarang"** (Check In Now) while within the school radius. The system will verify your coordinates against active school locations.
+4. If unable to attend, click **"Ajukan Izin/Sakit"** (Request Leave/Sick), write the reason, and upload a photo or PDF of the supporting letter.

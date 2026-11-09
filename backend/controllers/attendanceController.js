@@ -6,6 +6,7 @@ const Location = require("../models/Location");
 const AttendanceSession = require("../models/AttendanceSession");
 const puppeteer = require("puppeteer");
 const { getDistanceInMeters } = require("../utils/geoHelper");
+const { sendWhatsApp, sendEmail } = require("../services/notificationService");
 const {
   getJakartaDayRange,
   getJakartaDateString,
@@ -275,6 +276,47 @@ const approvedAttendanceLeaveByAdmin = async (req, res) => {
 
     await attendance.save();
 
+    // Kirim notifikasi konfirmasi persetujuan ke siswa secara non-blocking
+    (async () => {
+      try {
+        const studentInfo = await Student.findById(attendance.studentId).populate("userId");
+        if (studentInfo) {
+          const sName = studentInfo.userId?.name || "Siswa";
+          const sEmail = studentInfo.userId?.email;
+          const sPhone = studentInfo.phone || studentInfo.parentPhone;
+          const reqType = attendance.requestType || "Izin";
+
+          const waMsg = `Halo *${sName}*,\n\nPengajuan *${reqType}* Anda pada sistem *AbsensiKu* telah *DISETUJUI* oleh Admin.\n\nStatus kehadiran Anda telah diperbarui menjadi *${reqType}*.\n\nTerima kasih.`;
+
+          if (sPhone) {
+            sendWhatsApp({ to: sPhone, message: waMsg });
+          }
+
+          if (sEmail) {
+            sendEmail({
+              to: sEmail,
+              subject: `[AbsensiKu] Pengajuan ${reqType} Anda Telah Disetujui`,
+              html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                  <h2 style="color: #16a34a; margin-top: 0;">Pengajuan Disetujui</h2>
+                  <p>Halo <strong>${sName}</strong>,</p>
+                  <p>Permohonan <strong>${reqType}</strong> Anda di sistem AbsensiKu telah <strong>DISETUJUI</strong> oleh pihak sekolah / admin.</p>
+                  <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 20px 0; border-radius: 6px;">
+                    <strong>Status:</strong> ${reqType} (Disetujui)
+                  </div>
+                  <p style="font-size: 12px; color: #64748b; margin-top: 25px;">
+                    Pesan otomatis dikirim oleh sistem AbsensiKu.
+                  </p>
+                </div>
+              `,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error("Gagal mengirim notifikasi persetujuan izin:", notifErr.message);
+      }
+    })();
+
     success(
       res,
       200,
@@ -307,6 +349,48 @@ const rejectAttendanceLeaveByAdmin = async (req, res) => {
     attendance.approvedBy = req.user.id;
 
     await attendance.save();
+
+    // Kirim notifikasi penolakan ke siswa secara non-blocking
+    (async () => {
+      try {
+        const studentInfo = await Student.findById(attendance.studentId).populate("userId");
+        if (studentInfo) {
+          const sName = studentInfo.userId?.name || "Siswa";
+          const sEmail = studentInfo.userId?.email;
+          const sPhone = studentInfo.phone || studentInfo.parentPhone;
+          const reqType = attendance.requestType || "Izin";
+
+          const waMsg = `Halo *${sName}*,\n\nPengajuan *${reqType}* Anda pada sistem *AbsensiKu* *DITOLAK* oleh Admin. Status absensi Anda tercatat sebagai *Alpha*.\n\nSilakan hubungi pihak sekolah / admin jika ada kendala. Terima kasih.`;
+
+          if (sPhone) {
+            sendWhatsApp({ to: sPhone, message: waMsg });
+          }
+
+          if (sEmail) {
+            sendEmail({
+              to: sEmail,
+              subject: `[AbsensiKu] Pengajuan ${reqType} Anda Ditolak`,
+              html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                  <h2 style="color: #dc2626; margin-top: 0;">Pengajuan Ditolak</h2>
+                  <p>Halo <strong>${sName}</strong>,</p>
+                  <p>Permohonan <strong>${reqType}</strong> Anda di sistem AbsensiKu <strong>DITOLAK</strong> oleh admin.</p>
+                  <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 20px 0; border-radius: 6px; color: #991b1b;">
+                    <strong>Status:</strong> Alpha (Ditolak)
+                  </div>
+                  <p style="font-size: 12px; color: #64748b; margin-top: 25px;">
+                    Pesan otomatis dikirim oleh sistem AbsensiKu.
+                  </p>
+                </div>
+              `,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error("Gagal mengirim notifikasi penolakan izin:", notifErr.message);
+      }
+    })();
+
     success(res, 200, "Berhasil menolak pengajuan absensi siswa", attendance);
   } catch (err) {
     return error(res, 500, err.message);

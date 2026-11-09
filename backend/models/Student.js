@@ -13,6 +13,8 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
     nis: { type: String, required: true, unique: true },
+    phone: { type: String, default: "" },
+    parentPhone: { type: String, default: "" },
   },
   { timestamps: true },
 );

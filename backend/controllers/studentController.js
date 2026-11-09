@@ -53,7 +53,7 @@ const getAllStudentAccount = async (req, res) => {
 
 const createStudentAccount = async (req, res, next) => {
   try {
-    const { name, email, password, classId, nis } = req.body;
+    const { name, email, password, classId, nis, phone, parentPhone } = req.body;
 
     const [cariClass, existingEmail, existingNis] = await Promise.all([
       Class.findById(classId),
@@ -72,7 +72,13 @@ const createStudentAccount = async (req, res, next) => {
     }
 
     const user = await User.create({ name, email, password, role: "siswa" });
-    const student = await Student.create({ userId: user._id, classId, nis });
+    const student = await Student.create({
+      userId: user._id,
+      classId,
+      nis,
+      phone: phone || "",
+      parentPhone: parentPhone || "",
+    });
 
     success(res, 201, "Berhasil menambahkan user atau siswa/i", {
       user,
@@ -86,7 +92,7 @@ const createStudentAccount = async (req, res, next) => {
 const updateStudentAccount = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, email, password, classId, nis } = req.body;
+    const { name, email, password, classId, nis, phone, parentPhone } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return error(res, 400, "Format ID user tidak valid");
@@ -122,6 +128,8 @@ const updateStudentAccount = async (req, res, next) => {
     // Data Student yang ingin diubah
     const studentData = {};
     if (nis !== undefined) studentData.nis = nis;
+    if (phone !== undefined) studentData.phone = phone;
+    if (parentPhone !== undefined) studentData.parentPhone = parentPhone;
     if (classId !== undefined) {
       studentData.classId = classId;
     }

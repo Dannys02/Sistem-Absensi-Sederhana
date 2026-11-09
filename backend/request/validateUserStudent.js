@@ -33,6 +33,8 @@ const createStudent = Joi.object({
     "string.empty": "NIS tidak boleh kosong",
     "any.required": "NIS wajib diisi",
   }),
+  phone: Joi.string().allow("").optional(),
+  parentPhone: Joi.string().allow("").optional(),
 });
 
 const updateStudent = Joi.object({
@@ -61,6 +63,8 @@ const updateStudent = Joi.object({
     "string.base": "NIS harus berupa teks",
     "string.empty": "NIS tidak boleh kosong",
   }),
+  phone: Joi.string().allow("").optional(),
+  parentPhone: Joi.string().allow("").optional(),
 });
 
 

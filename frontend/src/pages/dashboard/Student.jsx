@@ -365,7 +365,7 @@ function Student() {
               className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#4F7942] text-white font-semibold shadow-sm hover:bg-[#3e6034] transition disabled:bg-gray-300 disabled:cursor-not-allowed ${attendedAt ? "bg-gray-200" : ""}`}
             >
               <CheckCircle2 size={20} />
-              {attendedAt ? "Sudah Absen" : "Absen Sekarang (Validasi Lokasi)"}
+              {attendedAt ? "Sudah Absen" : "Absen Sekarang"}
             </button>
           )}
         </div>

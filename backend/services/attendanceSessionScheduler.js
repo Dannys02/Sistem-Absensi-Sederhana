@@ -3,6 +3,7 @@ const AttendanceSession = require("../models/AttendanceSession");
 const AttendanceSetting = require("../models/AttendanceSetting");
 const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
+const { sendWhatsApp, sendEmail } = require("./notificationService");
 
 const {
   getJakartaDateString,
@@ -87,6 +88,97 @@ const createTodaySession = async () => {
     console.log(`[Scheduler] Sesi ${dateString} otomatis dibuat. ID: ${session._id} (${setting.startTime} - ${setting.endTime})`);
   } catch (err) {
     console.error("Gagal membuat sesi absensi otomatis:", err.message);
+  }
+};
+
+// Set untuk menyimpan ID sesi yang sudah dikirimi notifikasi reminder hari ini agar tidak duplikat
+const remindedSessions = new Set();
+
+// Mengirimkan notifikasi reminder kepada siswa yang BELUM absen sebelum sesi berakhir
+const notifyUnattendedStudents = async () => {
+  try {
+    const now = new Date();
+    const dateString = getJakartaDateString();
+    const { startOfDay, endOfDay } = getJakartaDayRange(dateString);
+
+    const session = await AttendanceSession.findOne({
+      date: { $gte: startOfDay, $lt: endOfDay },
+    });
+
+    if (!session) return;
+
+    // Jika sesi hari ini sudah pernah dikirimi pengingat broadcast, lewati
+    if (remindedSessions.has(session._id.toString())) return;
+
+    const endDateTime = getJakartaDateTime(dateString, session.endTime);
+    const startDateTime = getJakartaDateTime(dateString, session.startTime);
+
+    // Kirim notifikasi jika waktu sekarang berada di antara jam mulai dan 20 menit sebelum jam tutup
+    // Misal: sisa waktu 20 menit atau kurang sebelum sesi ditutup
+    const diffInMinutes = (endDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+    if (now >= startDateTime && diffInMinutes > 0 && diffInMinutes <= 25) {
+      remindedSessions.add(session._id.toString());
+      console.log(`[Notification Reminder] Mengirim notifikasi belum absen. Sisa waktu: ~${Math.round(diffInMinutes)} menit.`);
+
+      const existingAttendances = await Attendance.find({
+        sessionId: session._id,
+      }).select("studentId");
+
+      const studentIdsWithAttendance = existingAttendances.map((att) =>
+        att.studentId.toString()
+      );
+
+      const unattendedStudents = await Student.find({
+        _id: { $nin: studentIdsWithAttendance },
+      })
+        .populate("userId", "name email")
+        .populate("classId", "name");
+
+      if (unattendedStudents.length === 0) return;
+
+      console.log(`[Notification Reminder] Terdapat ${unattendedStudents.length} siswa belum absen.`);
+
+      // Dispatch notifikasi ke setiap siswa
+      for (const student of unattendedStudents) {
+        const studentName = student.userId?.name || "Siswa";
+        const studentEmail = student.userId?.email;
+        const studentPhone = student.phone || student.parentPhone;
+
+        const messageText = `Halo *${studentName}*,\n\nPengingat absensi harian di *AbsensiKu*:\nSesi absensi hari ini akan segera ditutup pada pukul *${session.endTime} WIB* (tersisa sekitar ${Math.round(diffInMinutes)} menit lagi).\n\nSegera lakukan check-in kehadiran di aplikasi sebelum sesi ditutup agar tidak terdata Alpha.\n\nTerima kasih.`;
+
+        // Kirim WhatsApp jika nomor tersedia
+        if (studentPhone) {
+          sendWhatsApp({
+            to: studentPhone,
+            message: messageText,
+          }).catch((e) => console.error(`Gagal kirim WA ke ${studentName}:`, e.message));
+        }
+
+        // Kirim Email jika email tersedia
+        if (studentEmail) {
+          sendEmail({
+            to: studentEmail,
+            subject: `[Pengingat Absensi] Sesi Hari Ini Segera Berakhir (${session.endTime} WIB)`,
+            html: `
+              <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+                <h2 style="color: #4F7942; margin-top: 0;">Pengingat Kehadiran AbsensiKu</h2>
+                <p>Halo <strong>${studentName}</strong>,</p>
+                <p>Sesi absensi hari ini akan ditutup pada pukul <strong>${session.endTime} WIB</strong> (tersisa kurang lebih ${Math.round(diffInMinutes)} menit lagi).</p>
+                <p style="background: #fef3c7; color: #92400e; padding: 12px; border-radius: 8px; font-weight: 500;">
+                  ⚠️ Anda belum tercatat melakukan absensi hari ini. Silakan segera buka aplikasi AbsensiKu dan lakukan check-in lokasi.
+                </p>
+                <p style="font-size: 12px; color: #64748b; margin-top: 30px;">
+                  Pesan otomatis ini dikirimkan oleh sistem AbsensiKu.
+                </p>
+              </div>
+            `,
+          }).catch((e) => console.error(`Gagal kirim Email ke ${studentEmail}:`, e.message));
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Gagal mengirim pengingat siswa belum absen:", err.message);
   }
 };
 
@@ -180,11 +272,21 @@ const startAttendanceSessionScheduler = () => {
     { timezone: TIMEZONE },
   );
 
+  // Memeriksa reminder notifikasi belum absen setiap 2 menit
+  cron.schedule(
+    "*/2 * * * *",
+    async () => {
+      await notifyUnattendedStudents();
+    },
+    { timezone: TIMEZONE },
+  );
+
   console.log("Scheduler sesi dan Alpha aktif dengan konfigurasi dinamis & optimasi hari ini.");
 };
 
 module.exports = {
   createTodaySession,
   processAbsentStudents,
+  notifyUnattendedStudents,
   startAttendanceSessionScheduler,
 };

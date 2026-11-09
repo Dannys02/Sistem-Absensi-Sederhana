@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Users, Pencil, Trash2, Plus, Save, X, Search } from "lucide-react";
 import api from "../../api/axios";
 
-const emptyForm = { name: "", email: "", password: "", classId: "", nis: "" };
+const emptyForm = { name: "", email: "", password: "", classId: "", nis: "", phone: "", parentPhone: "" };
 
 function StudentAdmin() {
   const [loading, setLoading] = useState(false);
@@ -132,6 +132,8 @@ function StudentAdmin() {
       password: "",
       classId: item.classId?._id || "",
       nis: item.nis || "",
+      phone: item.phone || "",
+      parentPhone: item.parentPhone || "",
     });
   };
 
@@ -291,6 +293,48 @@ function StudentAdmin() {
                 </span>
               )}
             </div>
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
+                No. WhatsApp Siswa
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="text"
+                value={form.phone}
+                autoComplete="tel"
+                onChange={handleChange}
+                placeholder="081234567890"
+                className={inputClass}
+              />
+              <span className="text-gray-400 text-xs">
+                Untuk pengingat absensi & info izin
+              </span>
+            </div>
+            <div>
+              <label
+                htmlFor="parentPhone"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
+                No. WhatsApp Orang Tua / Wali
+              </label>
+              <input
+                id="parentPhone"
+                name="parentPhone"
+                type="text"
+                value={form.parentPhone}
+                autoComplete="tel"
+                onChange={handleChange}
+                placeholder="081987654321"
+                className={inputClass}
+              />
+              <span className="text-gray-400 text-xs">
+                Opsional untuk notifikasi wali murid
+              </span>
+            </div>
           </div>
 
           <div className="flex gap-2 mt-4 w-fit">
@@ -354,6 +398,7 @@ function StudentAdmin() {
                 <th className="py-3.5 px-6 font-semibold w-16">No</th>
                 <th className="py-3.5 px-6 font-semibold">Nama Siswa</th>
                 <th className="py-3.5 px-6 font-semibold">Email</th>
+                <th className="py-3.5 px-6 font-semibold">WhatsApp</th>
                 <th className="py-3.5 px-6 font-semibold">NIS</th>
                 <th className="py-3.5 px-6 font-semibold">Kelas</th>
                 <th className="py-3.5 px-6 font-semibold text-center w-32">
@@ -364,7 +409,7 @@ function StudentAdmin() {
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center">
+                  <td colSpan={7} className="py-6 text-center">
                     <div className="flex items-center justify-center">
                       <div className="w-10 h-10 border-4 border-[#4F7942] border-t-transparent rounded-full animate-spin"></div>
                     </div>
@@ -373,7 +418,7 @@ function StudentAdmin() {
               ) : students.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="py-8 text-center text-gray-500 font-medium"
                   >
                     {search ? "Siswa tidak ditemukan" : "Belum ada data siswa"}
@@ -393,6 +438,9 @@ function StudentAdmin() {
                     </td>
                     <td className="py-4 px-6 font-semibold text-gray-800">
                       {item.userId?.email}
+                    </td>
+                    <td className="py-4 px-6 text-xs text-gray-600 font-mono">
+                      {item.phone || "-"}
                     </td>
                     <td className="py-4 px-6 text-gray-600">{item.nis}</td>
                     <td className="py-4 px-6">

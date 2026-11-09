@@ -218,12 +218,15 @@ const submitLeaveRequest = async (req, res) => {
       return error(res, 400, "Jenis pengajuan harus Izin atau Sakit");
     }
 
+    const attachmentPath = req.file ? `/uploads/documents/${req.file.filename}` : null;
+
     const attendance = await Attendance.create({
       studentId: student._id,
       sessionId: session._id,
       status: "Menunggu Approval",
       requestType,
       reason,
+      attachment: attachmentPath,
     });
 
     success(res, 200, "Berhasil mengajukan izin/sakit", attendance);

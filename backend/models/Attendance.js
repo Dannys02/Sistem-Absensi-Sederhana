@@ -51,6 +51,11 @@ const attendanceSchema = new mongoose.Schema(
       default: null,
     },
 
+    attachment: {
+      type: String,
+      default: null,
+    },
+
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

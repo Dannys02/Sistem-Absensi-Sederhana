@@ -9,6 +9,7 @@ const {
 } = require("../controllers/attendanceController");
 
 const { getActiveLocations } = require("../controllers/locationController");
+const uploadDocument = require("../middleware/uploadMiddleware");
 
 // middleware autentikasi
 const {
@@ -23,7 +24,12 @@ router.use(authenticate, authorize("siswa"));
 // Attendance
 router.post("/attendance/check-in", checkIn);
 router.get("/attendance/me", getAttendanceByStudent);
-router.post("/attendance/leave", validateBody, submitLeaveRequest);
+router.post(
+  "/attendance/leave",
+  uploadDocument.single("attachment"),
+  validateBody,
+  submitLeaveRequest
+);
 router.get("/locations/active", getActiveLocations);
 
 module.exports = router;

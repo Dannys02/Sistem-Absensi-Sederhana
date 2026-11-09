@@ -12,6 +12,8 @@ import {
   X,
   MapPin,
   Navigation,
+  Paperclip,
+  UploadCloud,
 } from "lucide-react";
 
 function Student() {
@@ -23,6 +25,9 @@ function Student() {
   const [history, setHistory] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ requestType: "", reason: "" });
+  const [attachment, setAttachment] = useState(null);
+  const [attachmentPreview, setAttachmentPreview] = useState(null);
+  const [submittingLeave, setSubmittingLeave] = useState(false);
   const [success, setSuccess] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -269,15 +274,51 @@ function Student() {
     );
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Ukuran file maksimal 5 MB");
+      return;
+    }
+
+    setAttachment(file);
+    if (file.type.startsWith("image/")) {
+      setAttachmentPreview(URL.createObjectURL(file));
+    } else {
+      setAttachmentPreview("pdf");
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+    setAttachmentPreview(null);
+  };
+
   // api kirim pengajuan izin/sakit
   const handleSubmitLeave = async (e) => {
     e.preventDefault();
+    setSubmittingLeave(true);
+    setError("");
 
     try {
-      const response = await api.post("/siswa/attendance/leave", form);
+      const formData = new FormData();
+      formData.append("requestType", form.requestType);
+      formData.append("reason", form.reason);
+      if (attachment) {
+        formData.append("attachment", attachment);
+      }
+
+      const response = await api.post("/siswa/attendance/leave", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       setSuccess(response.data.message);
 
       setForm({ requestType: "", reason: "" });
+      removeAttachment();
       setShowModal(false);
       setShowSuccess(true);
 
@@ -292,6 +333,8 @@ function Student() {
         setError("Terjadi kesalahan pada server.");
         console.log(err);
       }
+    } finally {
+      setSubmittingLeave(false);
     }
   };
 
@@ -579,10 +622,63 @@ function Student() {
                 name="reason"
                 value={form.reason}
                 onChange={handleChange}
-                rows={4}
+                rows={3}
                 placeholder="Tuliskan alasan kamu..."
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4F7942]/40 focus:border-[#4F7942]"
               />
+            </div>
+
+            {/* Upload Bukti Surat Dokter / Orang Tua */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700 flex items-center justify-between">
+                <span>Bukti Surat Dokter / Orang Tua</span>
+                <span className="text-xs text-gray-400 font-normal">Foto atau PDF (Maks 5MB)</span>
+              </label>
+
+              {!attachment ? (
+                <label className="border-2 border-dashed border-gray-300 hover:border-[#4F7942] rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-gray-50/60 hover:bg-emerald-50/30 transition">
+                  <UploadCloud className="w-6 h-6 text-gray-400" />
+                  <span className="text-xs font-semibold text-gray-600">
+                    Klik untuk pilih dokumen surat
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    Mendukung JPG, PNG, PDF
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className="border border-emerald-200 bg-emerald-50/50 rounded-xl p-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {attachmentPreview === "pdf" ? (
+                      <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">
+                        PDF
+                      </div>
+                    ) : (
+                      <img
+                        src={attachmentPreview}
+                        alt="Preview"
+                        className="w-8 h-8 object-cover rounded-lg border border-emerald-300 shrink-0"
+                      />
+                    )}
+                    <span className="text-xs text-slate-700 font-medium truncate max-w-[200px]">
+                      {attachment.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeAttachment}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                    title="Hapus file"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <span className="text-red-600 text-xs font-semibold">{error}</span>
@@ -597,9 +693,10 @@ function Student() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F7942] text-white text-sm font-semibold hover:bg-[#3e6034] transition"
+                disabled={submittingLeave}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F7942] text-white text-sm font-semibold hover:bg-[#3e6034] transition disabled:opacity-50"
               >
-                <Send size={16} /> Kirim
+                <Send size={16} /> {submittingLeave ? "Mengirim..." : "Kirim"}
               </button>
             </div>
           </form>

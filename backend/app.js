@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const connectDB = require("./config/database");
 const publicRoutes = require("./routes/publicRoutes");
 const adminRoutes = require("./routes/adminRoutes");
@@ -14,6 +15,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Sajikan file static uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // API URL
 app.use("/api/", publicRoutes);
